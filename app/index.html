@@ -323,7 +323,7 @@ let multiStreams=[], multiLayout='auto', multiRaf=null;
 let segmenter=null, segLoopOn=false;
 const personCanvas=document.createElement('canvas'); // holds person-only (bg removed) frames
 let displayStream=null, micStream=null, camStream=null;
-let mediaRecorder=null, chunks=[], rafId=null, audioCtx=null, micAnalyser=null;
+let mediaRecorder=null, chunks=[], rafId=null, recStopDraw=null, audioCtx=null, micAnalyser=null;
 let timerInt=null, startTime=0;
 let retakeCuts=[], lastKeepT=0, retakeBusy=false, retakeIv=null;   // live retake ("scratch that")
 function recElapsed(){ return Math.max(0,(Date.now()-startTime)/1000); } // seconds into the recorded blob
@@ -909,9 +909,8 @@ function startRecording(){
       const s=Math.min(ow/vw,oh/vh); const dw=vw*s, dh=vh*s;
       ctx.drawImage(preview,(ow-dw)/2,(oh-dh)/2,dw,dh);
     }
-    (function draw(){
+    function drawFrame(){
       if(camStream && camLayout==='split'){
-        // #10 split / stack — screen on top, camera below
         ctx.fillStyle='#000'; ctx.fillRect(0,0,ow,oh);
         const splitY=Math.round(oh*0.62);
         drawCoverSub(ctx, preview, sx,sy,sw,sh, 0,0,ow,splitY);
@@ -920,7 +919,6 @@ function startRecording(){
       }else{
         if(mode==='fit') drawFit();
         else ctx.drawImage(preview, sx,sy,sw,sh, 0,0,ow,oh);
-        // webcam bubble overlay (shape + optional bg-removal)
         if(camStream && camLayout==='bubble' && bubble.style.display==='block' && camVid.videoWidth){
           const bx=(bubble.offsetLeft-frame.offsetLeft)/frame.offsetWidth*ow;
           const by=(bubble.offsetTop -frame.offsetTop )/frame.offsetHeight*oh;
@@ -929,7 +927,7 @@ function startRecording(){
           if(cs.w){
             const side=Math.min(cs.w,cs.h), csx=(cs.w-side)/2, csy=(cs.h-side)/2;
             if(bgRemove){
-              ctx.drawImage(cs.el, csx,csy,side,side, bx,by,bd,bd); // float face, no border
+              ctx.drawImage(cs.el, csx,csy,side,side, bx,by,bd,bd);
             }else{
               ctx.save(); shapePath(ctx,bx,by,bd,bubbleShape); ctx.clip();
               ctx.drawImage(cs.el, csx,csy,side,side, bx,by,bd,bd);
@@ -940,8 +938,18 @@ function startRecording(){
           }
         }
       }
-      rafId=requestAnimationFrame(draw);
-    })();
+    }
+    // requestVideoFrameCallback fires on every decoded video frame regardless of tab visibility —
+    // prevents the recording from freezing when the user switches away from this tab to interact
+    // with the content being captured. Falls back to setInterval for browsers without rVFC support.
+    let _drawId=null;
+    if('requestVideoFrameCallback' in HTMLVideoElement.prototype){
+      (function rVFC(){ drawFrame(); _drawId=preview.requestVideoFrameCallback(rVFC); })();
+      recStopDraw=()=>{ if(_drawId!==null){preview.cancelVideoFrameCallback(_drawId);_drawId=null;} };
+    }else{
+      drawFrame(); _drawId=setInterval(drawFrame,1000/30);
+      recStopDraw=()=>{ clearInterval(_drawId); _drawId=null; };
+    }
   }
 
   // build combined stream
@@ -967,7 +975,8 @@ function startRecording(){
   mediaRecorder=new MediaRecorder(out, mime?{mimeType:mime,videoBitsPerSecond:8e6}:{videoBitsPerSecond:8e6});
   mediaRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
   mediaRecorder.onstop=async()=>{
-    cancelAnimationFrame(rafId);
+    cancelAnimationFrame(rafId); // camera/multi modes
+    if(recStopDraw){ recStopDraw(); recStopDraw=null; } // screen mode rVFC/interval
     const actual=mediaRecorder.mimeType||mime||'video/webm';
     const blob=new Blob(chunks,{type:actual});
     const ext=actual.includes('mp4')?'mp4':'webm';

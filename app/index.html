@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReFrame — Live Aspect-Ratio Screen Recorder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08090a; --bg-2:#0c0d0f;
+    --panel:#0e0f11; --panel-2:#121315; --elev:#16171a;
+    --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.11);
+    --txt:#ededef; --txt-2:#b4b5bd; --muted:#7c7d87; --faint:#56575f;
+    --accent:#5e6ad2; --accent-2:#6872e5; --accent-soft:rgba(94,106,210,.14);
+    --danger:#eb5757; --danger-soft:rgba(235,87,87,.13);
+    --r:10px; --r-lg:14px;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{
+    margin:0;font-family:'Inter',-apple-system,system-ui,sans-serif;
+    background:var(--bg);color:var(--txt);min-height:100vh;font-size:14px;line-height:1.5;
+    background-image:radial-gradient(800px 500px at 100% -5%,rgba(94,106,210,.08),transparent 60%);
+  }
+  ::selection{background:var(--accent-soft)}
+  header{padding:0 28px;height:56px;display:flex;align-items:center;gap:12px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;
+    background:rgba(8,9,10,.72);backdrop-filter:saturate(140%) blur(14px)}
+  .mark{width:24px;height:24px;border-radius:7px;background:linear-gradient(140deg,var(--accent),#8b94f0);
+    display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px rgba(255,255,255,.08) inset}
+  .mark svg{width:13px;height:13px}
+  .logo{font-weight:600;font-size:14px;letter-spacing:-.01em}
+  .tag{color:var(--muted);font-size:13px;margin-left:2px}
+  .wrap{display:grid;grid-template-columns:312px 1fr;gap:24px;padding:28px;align-items:start;max-width:1320px;margin:0 auto}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:6px;box-shadow:var(--shadow)}
+  .sec{padding:16px}
+  .sec+.sec{border-top:1px solid var(--line)}
+  .panel h2{margin:0 0 14px;font-size:11px;font-weight:590;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);display:flex;align-items:center;gap:8px}
+  .panel h2 .n{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:5px;background:var(--elev);border:1px solid var(--line);color:var(--muted);font-size:10px;font-weight:600}
+  .field{margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+  .field>label{display:block;font-size:12px;color:var(--muted);margin-bottom:7px;font-weight:500}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{padding:7px 11px;border:1px solid var(--line);background:var(--panel-2);border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--txt-2);transition:.13s ease}
+  .chip:hover{border-color:var(--line-2);color:var(--txt);background:var(--elev)}
+  .chip.on{background:var(--accent-soft);color:#cdd2f7;border-color:rgba(94,106,210,.5);font-weight:600}
+  select,input[type=text]{width:100%;padding:9px 10px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);color:var(--txt);font-size:13px;font-family:inherit;transition:.13s;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237c7d87' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+  select:focus,input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .toggle{display:flex;align-items:center;justify-content:space-between;padding:11px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;background:var(--panel-2);transition:.13s}
+  .toggle:hover{border-color:var(--line-2)}
+  .toggle>div{font-size:13px;font-weight:500}
+  .toggle small{display:block;color:var(--muted);font-size:11px;margin-top:3px;font-weight:400}
+  .sw{position:relative;width:36px;height:21px;flex:none}
+  .sw input{opacity:0;width:0;height:0}
+  .sw span{position:absolute;inset:0;background:#2a2b30;border-radius:20px;transition:.18s;cursor:pointer;border:1px solid var(--line)}
+  .sw span:before{content:"";position:absolute;height:15px;width:15px;left:3px;top:2.5px;background:#fff;border-radius:50%;transition:.18s}
+  .sw input:checked+span{background:var(--accent);border-color:var(--accent)}
+  .sw input:checked+span:before{transform:translateX(15px)}
+  .meter{height:5px;background:#26272c;border-radius:6px;overflow:hidden;margin-top:8px}
+  .meter>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#7dd3a8);transition:width .06s}
+  button.action{width:100%;padding:9px 12px;border:1px solid transparent;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:.13s ease;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px}
+  .btn-primary{background:#fff;color:#0a0a0a}
+  .btn-primary:hover{background:#e4e4e7}
+  .btn-rec{background:var(--accent);color:#fff;margin-top:8px}
+  .btn-rec:hover{background:var(--accent-2)}
+  .btn-rec.recording{background:var(--danger-soft);color:#ff9a9a;border-color:rgba(235,87,87,.4)}
+  .btn-rec:disabled,.btn-primary:disabled{opacity:.35;cursor:not-allowed}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line)!important;margin-top:8px}
+  .btn-ghost:hover{color:var(--txt-2);border-color:var(--line-2)!important}
+  /* stage */
+  .stage-wrap{position:relative}
+  .stage{position:relative;background:linear-gradient(180deg,#0c0d0f,#090a0b);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line);min-height:440px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+  .stage video{max-width:100%;max-height:72vh;display:block}
+  .stage #canvas.live{display:block;max-width:100%;max-height:72vh;border-radius:2px}
+  .empty{color:var(--muted);text-align:center;padding:60px;font-size:13px;line-height:1.7}
+  .empty b{color:var(--txt-2);font-weight:600}
+  .empty .ico{width:34px;height:34px;margin:0 auto 16px;border-radius:10px;background:var(--elev);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+  .empty .ico svg{width:17px;height:17px;stroke:var(--muted)}
+  /* crop frame */
+  #frame{position:absolute;border:1.5px solid var(--accent);box-shadow:0 0 0 4000px rgba(8,9,10,.62),0 0 0 1px rgba(255,255,255,.1);cursor:move;border-radius:3px}
+  #frame.guide{box-shadow:0 0 0 1px rgba(255,255,255,.12);border-style:dashed}
+  #frame .grip{position:absolute;width:12px;height:12px;background:#fff;border:2px solid var(--accent);border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+  #frame .se{right:-7px;bottom:-7px;cursor:nwse-resize}
+  #frame .ratio-badge{position:absolute;top:7px;left:7px;background:var(--accent);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;letter-spacing:.02em}
+  .rec-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--danger);margin-right:2px;box-shadow:0 0 0 0 rgba(235,87,87,.6);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(235,87,87,.55)}70%{box-shadow:0 0 0 6px rgba(235,87,87,0)}100%{box-shadow:0 0 0 0 rgba(235,87,87,0)}}
+  .statusbar{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:13px;color:var(--muted);padding:0 2px}
+  .hint{font-size:12px;color:var(--muted);margin:8px 2px 0;line-height:1.6}
+  a.dl{color:#a9b1f0;font-weight:600;text-decoration:none}
+  /* recordings */
+  .recs{margin-top:28px}
+  .recs h2{margin:0 0 14px;font-size:11px;font-weight:590;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);display:flex;justify-content:space-between;align-items:center}
+  .recs .clear{font-size:12px;color:var(--muted);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500;padding:4px 8px;border-radius:6px;transition:.13s}
+  .recs .clear:hover{color:var(--danger);background:var(--danger-soft)}
+  .recgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:14px}
+  .reccard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:.13s}
+  .reccard:hover{border-color:var(--line-2)}
+  .reccard video{width:100%;display:block;background:#000;max-height:320px;object-fit:contain}
+  .reccard .meta{padding:9px 11px 7px;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .reccard .meta b{color:var(--txt-2);font-weight:600;font-size:12px}
+  .reccard .acts{display:flex;gap:7px;padding:0 11px 11px}
+  .reccard .acts a,.reccard .acts button{flex:1;text-align:center;font-size:12px;font-weight:500;padding:6px;border-radius:7px;text-decoration:none;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);font-family:inherit;transition:.13s}
+  .reccard .acts a{color:var(--txt-2)}
+  .reccard .acts a:hover{color:var(--txt);border-color:var(--line-2)}
+  .reccard .acts button{color:var(--muted)}
+  .reccard .acts button:hover{color:var(--danger);border-color:rgba(235,87,87,.4)}
+  .recempty{color:var(--muted);font-size:13px;border:1px dashed var(--line);border-radius:var(--r);padding:28px;text-align:center}
+  kbd{display:inline-block;padding:0 5px;margin-left:5px;font:600 10px/1.6 ui-monospace,monospace;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:4px;color:var(--muted)}
+  #takeRow{display:flex}
+  /* multi-source list */
+  .msrc{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);margin-bottom:6px;font-size:12px;color:var(--txt-2)}
+  .msrc .x{cursor:pointer;color:var(--muted);border:none;background:none;font-size:13px;font-family:inherit}
+  .msrc .x:hover{color:var(--danger)}
+  /* webcam bubble */
+  #bubble{position:absolute;display:none;z-index:14;cursor:move;touch-action:none}
+  #bubble.shape-circle{border-radius:50%}
+  #bubble.shape-rounded{border-radius:18%}
+  #bubble.shape-square{border-radius:4px}
+  #bubble video{width:100%;height:100%;object-fit:cover;display:block;background:#000;border-radius:inherit;
+    border:2px solid rgba(255,255,255,.9);box-shadow:0 6px 22px rgba(0,0,0,.5);pointer-events:none}
+  #bubble .grip{position:absolute;width:16px;height:16px;background:#fff;border:2px solid var(--accent);border-radius:4px;right:-6px;bottom:-6px;cursor:nwse-resize;z-index:2;box-shadow:0 1px 5px rgba(0,0,0,.5)}
+  /* countdown overlay */
+  #count{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:15;background:rgba(8,9,10,.55);backdrop-filter:blur(3px)}
+  #count b{font-size:120px;font-weight:700;color:#fff;letter-spacing:-.04em;text-shadow:0 6px 30px rgba(0,0,0,.5);animation:pop .9s ease}
+  @keyframes pop{0%{transform:scale(.5);opacity:0}30%{transform:scale(1);opacity:1}100%{transform:scale(1.15);opacity:0}}
+  /* live timer pill */
+  .timer{display:none;align-items:center;gap:8px;margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600;color:var(--txt);background:var(--danger-soft);border:1px solid rgba(235,87,87,.4);padding:4px 10px;border-radius:20px;font-size:12px}
+  .timer.on{display:inline-flex}
+  /* rename */
+  .reccard .meta b{cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px;transition:.13s}
+  .reccard .meta b:hover{background:var(--elev)}
+  .reccard .meta input{font-size:12px;font-weight:600;color:var(--txt);background:var(--bg);border:1px solid var(--accent);border-radius:5px;padding:2px 5px;width:100%;font-family:inherit;outline:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M3 9v6M21 9v6"/></svg></div>
+  <div class="logo">ReFrame</div>
+  <span class="tag">Live aspect-ratio screen recorder</span>
+</header>
+
+<div class="wrap">
+  <!-- CONTROLS -->
+  <div class="panel">
+    <div class="sec">
+      <h2><span class="n">1</span>Source</h2>
+      <div class="field">
+        <div class="chips" id="source">
+          <div class="chip on" data-s="screen">Screen</div>
+          <div class="chip" data-s="camera">Camera</div>
+          <div class="chip" data-s="multi">Multi</div>
+        </div>
+      </div>
+      <div class="field" id="multiField" style="display:none">
+        <label>Multi-source layout</label>
+        <div class="chips" id="multiLayout">
+          <div class="chip on" data-l="auto">Auto</div>
+          <div class="chip" data-l="cols">Side by side</div>
+          <div class="chip" data-l="rows">Stacked</div>
+        </div>
+        <div id="multiList" style="margin-top:10px"></div>
+        <p class="hint">Add up to 3 screens/windows. Auto = stack for vertical ratios, side-by-side for wide.</p>
+      </div>
+      <div class="field" id="zoomField" style="display:none">
+        <label>Camera zoom</label>
+        <div class="chips" id="zoom">
+          <div class="chip" data-z="0.5">0.5×</div>
+          <div class="chip on" data-z="1">1×</div>
+          <div class="chip" data-z="2">2×</div>
+        </div>
+      </div>
+      <div class="field" id="mirrorField" style="display:none">
+        <div class="toggle"><div>Mirror <small>flip horizontally (selfie view)</small></div><label class="sw"><input type="checkbox" id="mirror"><span></span></label></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2><span class="n">2</span>Aspect ratio</h2>
+      <div class="field">
+        <div class="chips" id="ratios">
+          <div class="chip on" data-w="9" data-h="16">9:16</div>
+          <div class="chip" data-w="1" data-h="1">1:1</div>
+          <div class="chip" data-w="4" data-h="5">4:5</div>
+          <div class="chip" data-w="16" data-h="9">16:9</div>
+          <div class="chip" data-w="3" data-h="4">3:4</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Output resolution (long edge)</label>
+        <select id="res">
+          <option value="1920">1080p · 1080×1920 for 9:16</option>
+          <option value="2560">1440p · sharper</option>
+          <option value="1280">720p · smaller files</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Mode</label>
+        <div class="chips" id="mode">
+          <div class="chip on" data-m="crop">Crop</div>
+          <div class="chip" data-m="fit">Fit · no crop</div>
+        </div>
+      </div>
+      <div class="field" id="bgField" style="display:none">
+        <label>Fit background</label>
+        <select id="bg">
+          <option value="blur">Blurred source</option>
+          <option value="black">Black</option>
+          <option value="gradient">Dark gradient</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2><span class="n">3</span>Audio</h2>
+      <div class="toggle">
+        <div>Microphone <small>your voice / external mic</small></div>
+        <label class="sw"><input type="checkbox" id="mic"><span></span></label>
+      </div>
+      <select id="micDev" style="margin-bottom:7px;display:none"></select>
+      <div class="meter" id="micMeter" style="display:none"><i></i></div>
+      <div class="toggle" id="nsToggle" style="margin-top:7px;display:none">
+        <div>Noise suppression <small>echo cancel + auto-gain</small></div>
+        <label class="sw"><input type="checkbox" id="ns" checked><span></span></label>
+      </div>
+      <div class="toggle" style="margin-top:7px" id="sysToggle">
+        <div>System audio <small>internal — sound playing on screen</small></div>
+        <label class="sw"><input type="checkbox" id="sys" checked><span></span></label>
+      </div>
+      <p class="hint">System audio is captured from the screen-share prompt — tick “Share system audio” there too.</p>
+    </div>
+
+    <div class="sec" id="webcamSec">
+      <h2><span class="n">4</span>Webcam</h2>
+      <div class="toggle">
+        <div>Add webcam <small>overlay your camera on the screen</small></div>
+        <label class="sw"><input type="checkbox" id="cam"><span></span></label>
+      </div>
+      <select id="camDev" style="margin-top:7px;display:none"></select>
+      <div id="camOpts" style="display:none">
+        <div class="field" style="margin-top:12px">
+          <label>Layout</label>
+          <div class="chips" id="camLayout">
+            <div class="chip on" data-l="bubble">Bubble</div>
+            <div class="chip" data-l="split">Split · stack</div>
+          </div>
+        </div>
+        <div class="field" id="shapeField">
+          <label>Bubble shape</label>
+          <div class="chips" id="camShape">
+            <div class="chip on" data-sh="circle">Circle</div>
+            <div class="chip" data-sh="rounded">Rounded</div>
+            <div class="chip" data-sh="square">Square</div>
+          </div>
+        </div>
+        <div class="toggle"><div>Remove background <small>float your face — no green screen</small></div><label class="sw"><input type="checkbox" id="bgRemove"><span></span></label></div>
+        <p class="hint" id="camHint">Bubble: drag to move · drag the corner to resize. Split: screen on top, camera below.</p>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2><span class="n">5</span>Capture</h2>
+      <div class="field">
+        <label>Countdown before recording</label>
+        <div class="chips" id="countdown">
+          <div class="chip" data-s="0">Off</div>
+          <div class="chip on" data-s="3">3s</div>
+          <div class="chip" data-s="5">5s</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Format</label>
+        <select id="fmt">
+          <option value="auto">MP4 if supported, else WebM</option>
+          <option value="mp4">Force MP4</option>
+          <option value="webm">WebM</option>
+        </select>
+      </div>
+      <button class="action btn-primary" id="pick">Select screen / window</button>
+      <button class="action btn-rec" id="rec" disabled><span class="rec-dot" style="display:none"></span>Start recording</button>
+      <div id="takeRow" style="display:none;gap:8px;margin-top:8px">
+        <button class="action btn-ghost" id="keepBtn" style="margin-top:0;flex:1">✓ Keep <kbd>K</kbd></button>
+        <button class="action btn-ghost" id="retakeBtn" style="margin-top:0;flex:1;color:#ffb86b;border-color:rgba(255,184,107,.35)!important">↺ Retake <kbd>R</kbd></button>
+      </div>
+      <p class="hint" id="takeHint" style="display:none">✓ Keep marks a safe point. ↺ Retake scraps back to it and counts you in to redo — flubs are auto-removed in the editor.</p>
+      <button class="action btn-ghost" id="pause" style="display:none">Pause</button>
+      <button class="action btn-ghost" id="stopShare" disabled>Stop sharing</button>
+    </div>
+  </div>
+
+  <!-- STAGE -->
+  <div class="stage-wrap">
+    <div class="stage" id="stage">
+      <div class="empty" id="empty"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M3 9v6M21 9v6"/></svg></div>Click <b>“Select screen / window”</b> to begin.<br>Then drag the <b>frame</b> over the part you want recorded.</div>
+      <video id="preview" autoplay muted playsinline style="display:none"></video>
+      <div id="frame" style="display:none">
+        <div class="ratio-badge" id="badge">9:16</div>
+        <div class="grip se"></div>
+      </div>
+      <div id="bubble"><video id="camVid" autoplay muted playsinline></video><div class="grip"></div></div>
+      <div id="count"><b>3</b></div>
+      <canvas id="canvas" style="display:none"></canvas>
+    </div>
+    <div class="statusbar"><span id="status">Idle — no source selected.</span><span class="timer" id="timer"><span class="rec-dot"></span><span id="timerText">0:00</span></span></div>
+    <div id="dlbox"></div>
+
+    <div class="recs">
+      <h2>Recordings <span class="clear" id="clearAll" style="display:none">Clear all</span></h2>
+      <div class="recgrid" id="recgrid"><div class="recempty">No recordings yet — your takes will appear here.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let ratioW=9, ratioH=16, countSecs=3, mode='crop', pauseStart=0;
+let sourceMode='screen', zoom=1, camRaf=null, mirror=false;
+let bubbleShape='circle', camLayout='bubble', bgRemove=false;
+let multiStreams=[], multiLayout='auto', multiRaf=null;
+let segmenter=null, segLoopOn=false;
+const personCanvas=document.createElement('canvas'); // holds person-only (bg removed) frames
+let displayStream=null, micStream=null, camStream=null;
+let mediaRecorder=null, chunks=[], rafId=null, audioCtx=null, micAnalyser=null;
+let timerInt=null, startTime=0;
+let retakeCuts=[], lastKeepT=0, retakeBusy=false, retakeIv=null;   // live retake ("scratch that")
+function recElapsed(){ return Math.max(0,(Date.now()-startTime)/1000); } // seconds into the recorded blob
+const bubble=document.getElementById('bubble'), camVid=document.getElementById('camVid');
+
+const preview=$('#preview'), frame=$('#frame'), stage=$('#stage'),
+      canvas=$('#canvas'), status=$('#status'), empty=$('#empty');
+
+/* ---------- recordings store (IndexedDB) ---------- */
+let db=null;
+const openDB=()=>new Promise((res,rej)=>{
+  const r=indexedDB.open('reframe',1);
+  r.onupgradeneeded=()=>r.result.createObjectStore('clips',{keyPath:'id'});
+  r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+});
+const tx=(mode,fn)=>{const t=db.transaction('clips',mode);const s=t.objectStore('clips');return new Promise((res,rej)=>{const rq=fn(s);t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error);});};
+const saveClip=c=>tx('readwrite',s=>s.put(c));
+const allClips=()=>tx('readonly',s=>s.getAll());
+const delClip=id=>tx('readwrite',s=>s.delete(id));
+const clearClips=()=>tx('readwrite',s=>s.clear());
+
+function fmtSize(b){return b>1e6?(b/1e6).toFixed(1)+' MB':(b/1e3).toFixed(0)+' KB';}
+async function renderRecs(){
+  const grid=$('#recgrid'); const clips=(await allClips()).sort((a,b)=>b.id-a.id);
+  $('#clearAll').style.display=clips.length?'inline':'none';
+  if(!clips.length){grid.innerHTML='<div class="recempty">No recordings yet — your takes will appear here.</div>';return;}
+  grid.innerHTML='';
+  clips.forEach(c=>{
+    const url=URL.createObjectURL(c.blob);
+    const card=document.createElement('div'); card.className='reccard';
+    const rk=(c.retakeCuts&&c.retakeCuts.length)?`<span style="color:#ffb86b" title="${c.retakeCuts.length} retake(s) auto-trimmed — open Edit">↺ ${c.retakeCuts.length}</span>`:'';
+    card.innerHTML=`<video src="${url}" controls preload="metadata"></video>
+      <div class="meta"><b title="Click to rename"></b><span>${rk}${fmtSize(c.blob.size)}</span></div>
+      <div class="acts"><a href="editor.html?id=${c.id}">✦ Edit</a><a href="${url}" download="${c.file}">⬇ Download</a><button data-id="${c.id}">🗑 Delete</button></div>`;
+    const lbl=card.querySelector('b'); lbl.textContent=c.label;
+    lbl.onclick=()=>{
+      const inp=document.createElement('input'); inp.value=c.label;
+      lbl.replaceWith(inp); inp.focus(); inp.select();
+      const commit=async()=>{ const v=inp.value.trim()||c.label; c.label=v; await saveClip(c); renderRecs(); };
+      inp.onblur=commit;
+      inp.onkeydown=e=>{ if(e.key==='Enter')inp.blur(); if(e.key==='Escape')renderRecs(); };
+    };
+    card.querySelector('button').onclick=async e=>{await delClip(+e.target.dataset.id);renderRecs();};
+    grid.appendChild(card);
+  });
+}
+$('#clearAll').onclick=async()=>{if(confirm('Delete all recordings?')){await clearClips();renderRecs();}};
+
+/* ---------- ratio chips ---------- */
+$('#ratios').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  document.querySelectorAll('#ratios .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); ratioW=+c.dataset.w; ratioH=+c.dataset.h;
+  $('#badge').textContent=`${ratioW}:${ratioH}`;
+  if(preview.style.display!=='none') resetFrame();
+  if((camRaf||multiRaf)){ const {ow,oh}=outputDims(); canvas.width=ow; canvas.height=oh; }
+});
+$('#res').addEventListener('change', ()=>{
+  if((camRaf||multiRaf)){ const {ow,oh}=outputDims(); canvas.width=ow; canvas.height=oh; }
+});
+
+/* ---------- source chips (screen / camera) ---------- */
+$('#source').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  if(c.dataset.s===sourceMode) return;
+  document.querySelectorAll('#source .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); sourceMode=c.dataset.s;
+  stopShare(); // reset any active capture when switching source
+  const cam = sourceMode==='camera', multi = sourceMode==='multi';
+  $('#zoomField').style.display = cam ? 'block' : 'none';
+  $('#mirrorField').style.display = cam ? 'block' : 'none';
+  $('#multiField').style.display = multi ? 'block' : 'none';
+  $('#webcamSec').style.display = (cam||multi) ? 'none' : 'block';
+  $('#sysToggle').style.display = cam ? 'none' : 'flex';
+  $('#pick').textContent = cam ? 'Start camera' : multi ? 'Add screen / window' : 'Select screen / window';
+  if(multi) renderMultiList();
+  $('#empty').innerHTML = cam
+    ? '<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>Click <b>“Start camera”</b> to record yourself in '+ratioW+':'+ratioH+'.<br>Use <b>zoom</b> to frame your shot.'
+    : multi
+    ? '<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/></svg></div>Click <b>“Add screen / window”</b> to add up to 3 sources.<br>They tile automatically into your '+ratioW+':'+ratioH+' frame.'
+    : '<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M3 9v6M21 9v6"/></svg></div>Click <b>“Select screen / window”</b> to begin.<br>Then drag the <b>frame</b> over the part you want recorded.';
+});
+
+/* ---------- multi-source (#11) ---------- */
+$('#multiLayout').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  document.querySelectorAll('#multiLayout .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); multiLayout=c.dataset.l;
+});
+function renderMultiList(){
+  const box=$('#multiList'); if(!box) return;
+  box.innerHTML='';
+  multiStreams.forEach((m,i)=>{
+    const row=document.createElement('div'); row.className='msrc';
+    row.innerHTML=`<span>Source ${i+1}${m.label?' · '+m.label:''}</span><button class="x" data-i="${i}">✕ remove</button>`;
+    row.querySelector('.x').onclick=()=>removeMultiSource(i);
+    box.appendChild(row);
+  });
+}
+async function addMultiSource(){
+  if(multiStreams.length>=3){ status.textContent='Max 3 sources.'; return; }
+  try{
+    const first=multiStreams.length===0;
+    const s=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30}, audio:first}); // system audio from first only
+    const v=document.createElement('video'); v.srcObject=s; v.muted=true; v.playsInline=true; await v.play();
+    const label=(s.getVideoTracks()[0].label||'').slice(0,22);
+    multiStreams.push({stream:s, video:v, label});
+    s.getVideoTracks()[0].addEventListener('ended', ()=>{ const idx=multiStreams.findIndex(x=>x.stream===s); if(idx>=0) removeMultiSource(idx); });
+    if(multiStreams.length===1){ // start preview on first add
+      empty.style.display='none'; preview.style.display='none'; frame.style.display='none';
+      const {ow,oh}=outputDims(); canvas.width=ow; canvas.height=oh;
+      startMultiPreview();
+      $('#rec').disabled=false; $('#stopShare').disabled=false;
+    }
+    renderMultiList();
+    status.textContent=`${multiStreams.length} source(s) — they tile into the frame. Add more or record.`;
+  }catch(err){ status.textContent='Source selection cancelled.'; }
+}
+function removeMultiSource(i){
+  const m=multiStreams[i]; if(!m) return;
+  m.stream.getTracks().forEach(t=>t.stop());
+  multiStreams.splice(i,1); renderMultiList();
+  if(!multiStreams.length){ stopMultiPreview(); preview.style.display='none'; frame.style.display='none'; empty.style.display='block'; $('#rec').disabled=true; $('#stopShare').disabled=true; status.textContent='All sources removed.'; }
+}
+function multiRegions(n, ow, oh){
+  const layout = multiLayout==='auto' ? (oh>=ow?'rows':'cols') : multiLayout;
+  const regs=[];
+  for(let i=0;i<n;i++){
+    if(layout==='rows') regs.push({x:0, y:i*oh/n, w:ow, h:oh/n});
+    else regs.push({x:i*ow/n, y:0, w:ow/n, h:oh});
+  }
+  return regs;
+}
+function drawMultiFrame(){
+  const ctx=canvas.getContext('2d'), ow=canvas.width, oh=canvas.height;
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,ow,oh);
+  const n=multiStreams.length; if(!n) return;
+  const regs=multiRegions(n, ow, oh);
+  multiStreams.forEach((m,i)=>{
+    const v=m.video, vw=v.videoWidth, vh=v.videoHeight, r=regs[i];
+    if(!vw) return;
+    const s=Math.min(r.w/vw, r.h/vh), dw=vw*s, dh=vh*s; // contain — don't crop the screen
+    ctx.drawImage(v, r.x+(r.w-dw)/2, r.y+(r.h-dh)/2, dw, dh);
+  });
+  // divider lines
+  ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=Math.max(2,ow*0.004);
+  for(let i=1;i<n;i++){ const r=regs[i]; ctx.beginPath();
+    if(r.x===0){ ctx.moveTo(0,r.y); ctx.lineTo(ow,r.y); } else { ctx.moveTo(r.x,0); ctx.lineTo(r.x,oh); }
+    ctx.stroke(); }
+}
+function startMultiPreview(){ canvas.classList.add('live'); canvas.style.display='block'; (function loop(){ drawMultiFrame(); multiRaf=requestAnimationFrame(loop); })(); }
+function stopMultiPreview(){ cancelAnimationFrame(multiRaf); multiRaf=null; canvas.classList.remove('live'); canvas.style.display='none'; }
+
+/* ---------- zoom chips (camera) ---------- */
+$('#zoom').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  document.querySelectorAll('#zoom .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); zoom=+c.dataset.z;
+});
+$('#mirror').addEventListener('change', e=>{ mirror=e.target.checked; });
+
+/* ---------- output dimensions for the chosen ratio ---------- */
+function outputDims(){
+  const longEdge=+$('#res').value; let ow,oh;
+  if(ratioH>=ratioW){ oh=longEdge; ow=Math.round(oh*ratioW/ratioH); }
+  else{ ow=longEdge; oh=Math.round(ow*ratioH/ratioW); }
+  return {ow:ow-ow%2, oh:oh-oh%2};
+}
+
+/* ---------- camera mode: draw camera cover-fit + zoom into canvas ---------- */
+function drawCamFrame(){
+  const ctx=canvas.getContext('2d'), ow=canvas.width, oh=canvas.height;
+  const vw=preview.videoWidth, vh=preview.videoHeight;
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,ow,oh);
+  if(!vw) return;
+  const cover=Math.max(ow/vw,oh/vh);
+  ctx.save();
+  if(mirror){ ctx.translate(ow,0); ctx.scale(-1,1); } // horizontal flip
+  // blurred backdrop — shown when zoomed out, or to replace a removed background
+  if(zoom<1 || bgRemove){
+    const bw=vw*cover, bh=vh*cover;
+    ctx.filter='blur(26px)';
+    ctx.drawImage(preview,(ow-bw)/2,(oh-bh)/2,bw,bh);
+    ctx.filter='none';
+    ctx.fillStyle='rgba(0,0,0,.28)'; ctx.fillRect(0,0,ow,oh);
+  }
+  // foreground at the chosen zoom — person-only when bg removal is on
+  const scale=cover*zoom, dw=vw*scale, dh=vh*scale;
+  const fg=(bgRemove && personCanvas.width) ? personCanvas : preview;
+  ctx.drawImage(fg,(ow-dw)/2,(oh-dh)/2,dw,dh);
+  ctx.restore();
+}
+/* ---- shared compositing helpers (used by recording draw) ---- */
+function camSource(){
+  if(bgRemove && personCanvas.width) return {el:personCanvas, w:personCanvas.width, h:personCanvas.height};
+  return {el:camVid, w:camVid.videoWidth, h:camVid.videoHeight};
+}
+function drawCover(ctx, srcEl, sw, sh, dx, dy, dw, dh){
+  ctx.save(); ctx.beginPath(); ctx.rect(dx,dy,dw,dh); ctx.clip();
+  const s=Math.max(dw/sw, dh/sh), rw=sw*s, rh=sh*s;
+  ctx.drawImage(srcEl, dx+(dw-rw)/2, dy+(dh-rh)/2, rw, rh);
+  ctx.restore();
+}
+function drawCoverSub(ctx, srcEl, sx,sy,sw,sh, dx,dy,dw,dh){
+  ctx.save(); ctx.beginPath(); ctx.rect(dx,dy,dw,dh); ctx.clip();
+  const s=Math.max(dw/sw, dh/sh), rw=sw*s, rh=sh*s;
+  ctx.drawImage(srcEl, sx,sy,sw,sh, dx+(dw-rw)/2, dy+(dh-rh)/2, rw, rh);
+  ctx.restore();
+}
+function shapePath(ctx,x,y,d,shape){
+  ctx.beginPath();
+  if(shape==='circle') ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);
+  else if(shape==='rounded' && ctx.roundRect) ctx.roundRect(x,y,d,d,d*0.18);
+  else ctx.rect(x,y,d,d);
+  ctx.closePath();
+}
+function startCamPreview(){
+  const {ow,oh}=outputDims(); canvas.width=ow; canvas.height=oh;
+  canvas.classList.add('live'); canvas.style.display='block'; // inline style overrides the CSS class
+  (function loop(){ drawCamFrame(); camRaf=requestAnimationFrame(loop); })();
+}
+function stopCamPreview(){ cancelAnimationFrame(camRaf); camRaf=null; canvas.classList.remove('live'); canvas.style.display='none'; }
+
+/* ---------- mode chips (crop / fit) ---------- */
+$('#mode').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  document.querySelectorAll('#mode .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); mode=c.dataset.m;
+  $('#bgField').style.display = mode==='fit' ? 'block' : 'none';
+  // in fit mode the frame is just a ratio guide for overlays — not a crop region
+  frame.style.cursor = mode==='fit' ? 'default' : 'move';
+  frame.querySelector('.se').style.display = mode==='fit' ? 'none' : 'block';
+  frame.classList.toggle('guide', mode==='fit');
+  if(preview.style.display!=='none'){ resetFrame(); if(camStream) placeBubble(); }
+});
+
+/* ---------- countdown chips ---------- */
+$('#countdown').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  document.querySelectorAll('#countdown .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); countSecs=+c.dataset.s;
+});
+
+/* ---------- webcam bubble ---------- */
+$('#cam').addEventListener('change', async e=>{
+  if(e.target.checked){
+    try{
+      camStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:640}});
+      camVid.srcObject=camStream; await camVid.play();
+      const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
+      const sel=$('#camDev'); sel.innerHTML=''; sel.style.display='block';
+      devs.forEach(d=>{const o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||'Camera';sel.appendChild(o);});
+      $('#camOpts').style.display='block';
+      applyBubbleShape();
+      updateCamLayoutUI();
+    }catch(err){ alert('Camera access denied: '+err.message); e.target.checked=false; }
+  }else{
+    if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+    bubble.style.display='none'; $('#camDev').style.display='none'; $('#camOpts').style.display='none';
+    stopSegLoop();
+  }
+});
+function applyBubbleShape(){
+  bubble.classList.remove('shape-circle','shape-rounded','shape-square');
+  bubble.classList.add('shape-'+bubbleShape);
+  // when removing background, hide the border so the face floats freely
+  bubble.querySelector('video').style.border = bgRemove ? 'none' : '2px solid rgba(255,255,255,.9)';
+  bubble.querySelector('video').style.boxShadow = bgRemove ? 'none' : '0 6px 22px rgba(0,0,0,.5)';
+}
+function updateCamLayoutUI(){
+  const bubbleMode = camLayout==='bubble';
+  $('#shapeField').style.display = bubbleMode ? 'block' : 'none';
+  bubble.style.display = (camStream && bubbleMode) ? 'block' : 'none';
+  if(camStream && bubbleMode) placeBubble();
+}
+$('#camShape').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  document.querySelectorAll('#camShape .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); bubbleShape=c.dataset.sh; applyBubbleShape();
+});
+$('#camLayout').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  document.querySelectorAll('#camLayout .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); camLayout=c.dataset.l; updateCamLayoutUI();
+});
+$('#bgRemove').addEventListener('change', async e=>{
+  bgRemove=e.target.checked;
+  applyBubbleShape();
+  if(bgRemove){ const ok=await ensureSegmenter(); if(ok) startSegLoop(); else { bgRemove=false; e.target.checked=false; } }
+  else stopSegLoop();
+});
+$('#camDev').addEventListener('change', async e=>{
+  if(camStream) camStream.getTracks().forEach(t=>t.stop());
+  camStream=await navigator.mediaDevices.getUserMedia({video:{deviceId:e.target.value}});
+  camVid.srcObject=camStream;
+});
+// bubble is clamped to the frame when one exists, otherwise to the whole stage
+function bubbleBounds(){
+  if(frame.style.display!=='none' && frame.offsetWidth)
+    return {l:frame.offsetLeft,t:frame.offsetTop,w:frame.offsetWidth,h:frame.offsetHeight};
+  return {l:0,t:0,w:stage.clientWidth,h:stage.clientHeight};
+}
+function placeBubble(){
+  const b=bubbleBounds();
+  const d=Math.round(Math.min(b.w,b.h)*0.26)||140;
+  setBubble(b.l+b.w*0.06, b.t+b.h-d-b.w*0.06, d);
+}
+function setBubble(x,y,d){
+  const b=bubbleBounds();
+  d=Math.max(48,Math.min(d,Math.min(b.w,b.h)));   // size limits
+  x=Math.max(b.l,Math.min(x,b.l+b.w-d));          // keep inside bounds
+  y=Math.max(b.t,Math.min(y,b.t+b.h-d));
+  bubble.style.left=x+'px';bubble.style.top=y+'px';bubble.style.width=d+'px';bubble.style.height=d+'px';
+}
+let bdrag=null;
+bubble.addEventListener('pointerdown',e=>{
+  const resize = e.target.classList.contains('grip');
+  bdrag={resize,sx:e.clientX,sy:e.clientY,bx:bubble.offsetLeft,by:bubble.offsetTop,bw:bubble.offsetWidth};
+  e.stopPropagation(); e.preventDefault();
+  const move=ev=>{
+    if(!bdrag) return;
+    const dx=ev.clientX-bdrag.sx, dy=ev.clientY-bdrag.sy;
+    if(bdrag.resize) setBubble(bdrag.bx,bdrag.by,bdrag.bw+dx);
+    else setBubble(bdrag.bx+dx,bdrag.by+dy,bdrag.bw);
+  };
+  const up=()=>{ bdrag=null; document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); };
+  document.addEventListener('pointermove',move);
+  document.addEventListener('pointerup',up);
+});
+
+/* ---------- background removal (MediaPipe Selfie Segmentation) ---------- */
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.crossOrigin='anonymous';s.onload=res;s.onerror=()=>rej(new Error('load failed '+src));document.head.appendChild(s);});}
+async function ensureSegmenter(){
+  if(segmenter) return true;
+  try{
+    status.textContent='Loading background-removal model…';
+    if(!window.SelfieSegmentation)
+      await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js');
+    segmenter=new SelfieSegmentation({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`});
+    segmenter.setOptions({modelSelection:1});
+    const pctx=personCanvas.getContext('2d');
+    segmenter.onResults(r=>{
+      const w=r.image.width, h=r.image.height;
+      if(personCanvas.width!==w){personCanvas.width=w;personCanvas.height=h;}
+      pctx.save(); pctx.clearRect(0,0,w,h);
+      pctx.drawImage(r.segmentationMask,0,0,w,h);
+      pctx.globalCompositeOperation='source-in';   // keep only the person pixels
+      pctx.drawImage(r.image,0,0,w,h);
+      pctx.restore();
+    });
+    status.textContent='Background-removal ready.';
+    return true;
+  }catch(err){ status.textContent='⚠ Couldn’t load background-removal (offline?). Disabled.'; segmenter=null; return false; }
+}
+function startSegLoop(){
+  if(segLoopOn) return; segLoopOn=true;
+  (async function loop(){
+    if(!segLoopOn) return;
+    const src = sourceMode==='camera' ? preview : camVid;
+    if(segmenter && src && src.videoWidth){ try{ await segmenter.send({image:src}); }catch(e){} }
+    if(segLoopOn) requestAnimationFrame(loop);
+  })();
+}
+function stopSegLoop(){ segLoopOn=false; }
+
+/* ---------- choose recording mime ---------- */
+function pickMime(){
+  const pref=$('#fmt').value;
+  const mp4=['video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1','video/mp4'];
+  const webm=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  const sup=t=>{try{return MediaRecorder.isTypeSupported(t);}catch(e){return false;}};
+  if(pref==='webm') return webm.find(sup)||'';
+  if(pref==='mp4'){ const m=mp4.find(sup); if(m) return m; alert('Your browser can’t record MP4 directly — falling back to WebM. (Chrome 130+ supports MP4.)'); return webm.find(sup)||''; }
+  return mp4.find(sup)||webm.find(sup)||''; // auto
+}
+
+/* ---------- mic toggle + devices + meter + noise suppression (#23) ---------- */
+function micConstraints(deviceId){
+  const on=$('#ns').checked;
+  const a={ noiseSuppression:on, echoCancellation:on, autoGainControl:on };
+  if(deviceId) a.deviceId={exact:deviceId};
+  return {audio:a};
+}
+$('#mic').addEventListener('change', async e=>{
+  if(e.target.checked){
+    try{
+      micStream=await navigator.mediaDevices.getUserMedia(micConstraints());
+      const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput');
+      const sel=$('#micDev'); sel.innerHTML=''; sel.style.display='block';
+      devs.forEach(d=>{const o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||'Microphone';sel.appendChild(o);});
+      $('#micMeter').style.display='block'; $('#nsToggle').style.display='flex';
+      startMeter(micStream);
+    }catch(err){ alert('Mic access denied: '+err.message); e.target.checked=false; }
+  }else{
+    if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
+    $('#micDev').style.display='none'; $('#micMeter').style.display='none'; $('#nsToggle').style.display='none';
+  }
+});
+async function reacquireMic(){
+  if(!micStream) return;
+  micStream.getTracks().forEach(t=>t.stop());
+  micStream=await navigator.mediaDevices.getUserMedia(micConstraints($('#micDev').value));
+  startMeter(micStream);
+}
+$('#micDev').addEventListener('change', reacquireMic);
+$('#ns').addEventListener('change', reacquireMic);
+function startMeter(stream){
+  const ctx=new AudioContext();
+  const src=ctx.createMediaStreamSource(stream);
+  const an=ctx.createAnalyser(); an.fftSize=256; src.connect(an);
+  const data=new Uint8Array(an.frequencyBinCount); const bar=$('#micMeter i');
+  (function loop(){
+    an.getByteFrequencyData(data);
+    const v=Math.min(100,(data.reduce((a,b)=>a+b,0)/data.length)*1.6);
+    bar.style.width=v+'%'; requestAnimationFrame(loop);
+  })();
+}
+
+/* ---------- pick screen ---------- */
+$('#pick').addEventListener('click', async ()=>{
+  if(sourceMode==='multi'){ addMultiSource(); return; }
+  try{
+    if(sourceMode==='camera'){
+      displayStream=await navigator.mediaDevices.getUserMedia({video:{width:1280,height:1280,frameRate:30}});
+      preview.srcObject=displayStream; await preview.play();
+      empty.style.display='none';
+      preview.style.display='none'; frame.style.display='none'; // camera renders via canvas
+      startCamPreview();
+      $('#rec').disabled=false; $('#stopShare').disabled=false;
+      displayStream.getVideoTracks()[0].addEventListener('ended', stopShare);
+      status.textContent='Camera ready — pick a zoom, then hit record.';
+    }else{
+      displayStream=await navigator.mediaDevices.getDisplayMedia({
+        video:{frameRate:30}, audio:$('#sys').checked
+      });
+      preview.srcObject=displayStream; await preview.play();
+      empty.style.display='none'; preview.style.display='block'; frame.style.display='block';
+      $('#rec').disabled=false; $('#stopShare').disabled=false;
+      displayStream.getVideoTracks()[0].addEventListener('ended', stopShare);
+      setTimeout(()=>{resetFrame(); if(camStream) placeBubble();},150);
+      status.textContent='Source ready — drag the frame, then hit record.';
+    }
+  }catch(err){
+    const n=err && err.name;
+    let msg;
+    if(n==='NotAllowedError' || n==='SecurityError')
+      msg = sourceMode==='camera'
+        ? '⚠ Camera blocked. Allow camera access in your browser’s site settings, then retry.'
+        : 'Screen selection cancelled or blocked.';
+    else if(n==='NotFoundError' || n==='OverconstrainedError')
+      msg = '⚠ No camera found. Connect a camera and retry.';
+    else if(n==='NotReadableError' || n==='AbortError')
+      msg = '⚠ Camera is in use by another app (Zoom, Meet, etc.). Close it and retry.';
+    else
+      msg = (sourceMode==='camera' ? 'Camera error: ' : 'Capture error: ') + (err && err.message || 'unknown');
+    status.textContent=msg;
+  }
+});
+$('#stopShare').addEventListener('click', stopShare);
+function stopShare(){
+  if(mediaRecorder&&mediaRecorder.state!=='inactive') stopRecording();
+  if(displayStream){displayStream.getTracks().forEach(t=>t.stop());displayStream=null;}
+  multiStreams.forEach(m=>m.stream.getTracks().forEach(t=>t.stop())); multiStreams=[];
+  if($('#multiList')) renderMultiList();
+  stopCamPreview(); stopMultiPreview();
+  preview.style.display='none'; frame.style.display='none'; empty.style.display='block';
+  $('#rec').disabled=true; $('#stopShare').disabled=true;
+  status.textContent='Stopped.';
+}
+
+/* ---------- crop frame geometry ----------
+   The preview <video> is letterboxed inside the stage. We compute the
+   rendered video rect, then place a ratio-locked frame inside it. */
+function videoRect(){
+  const vw=preview.videoWidth, vh=preview.videoHeight;
+  const cr=preview.getBoundingClientRect(), sr=stage.getBoundingClientRect();
+  // preview element already sized by object fit (max-width/height); use its box
+  return {x:cr.left-sr.left, y:cr.top-sr.top, w:cr.width, h:cr.height, vw, vh};
+}
+function resetFrame(){
+  const r=videoRect(); if(!r.w) return;
+  // fit a ratioW:ratioH box inside the video rect at ~70% size
+  let fw,fh;
+  if(ratioW/ratioH > r.w/r.h){ fw=r.w*0.7; fh=fw*ratioH/ratioW; }
+  else{ fh=r.h*0.7; fw=fh*ratioW/ratioH; }
+  setFrame(r.x+(r.w-fw)/2, r.y+(r.h-fh)/2, fw, fh);
+}
+function setFrame(x,y,w,h){
+  const r=videoRect();
+  // clamp inside video rect
+  w=Math.min(w,r.w); h=w*ratioH/ratioW;
+  if(h>r.h){h=r.h;w=h*ratioW/ratioH;}
+  x=Math.max(r.x,Math.min(x,r.x+r.w-w));
+  y=Math.max(r.y,Math.min(y,r.y+r.h-h));
+  frame.style.left=x+'px';frame.style.top=y+'px';frame.style.width=w+'px';frame.style.height=h+'px';
+  if(bubble.style.display==='block') setBubble(bubble.offsetLeft,bubble.offsetTop,bubble.offsetWidth);
+}
+
+/* drag + resize */
+let drag=null;
+frame.addEventListener('pointerdown',e=>{
+  if(mode==='fit') return; // frame is fixed guide in fit mode
+  const resize=e.target.classList.contains('se');
+  drag={resize,sx:e.clientX,sy:e.clientY,
+        fx:frame.offsetLeft,fy:frame.offsetTop,fw:frame.offsetWidth,fh:frame.offsetHeight};
+  frame.setPointerCapture(e.pointerId); e.preventDefault();
+});
+frame.addEventListener('pointermove',e=>{
+  if(!drag) return;
+  const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy;
+  if(drag.resize){ setFrame(drag.fx,drag.fy,drag.fw+dx,0); }
+  else{ setFrame(drag.fx+dx,drag.fy+dy,drag.fw,drag.fh); }
+});
+frame.addEventListener('pointerup',()=>drag=null);
+window.addEventListener('resize',()=>{if(preview.style.display!=='none')resetFrame();});
+
+/* ---------- recording: draw crop region to canvas ---------- */
+$('#rec').addEventListener('click', ()=>{
+  if(mediaRecorder&&mediaRecorder.state!=='inactive') stopRecording();
+  else runCountdown();
+});
+$('#pause').addEventListener('click', ()=>{
+  if(!mediaRecorder) return;
+  if(retakeBusy) return;  // don't pause mid retake count-in (would skew the discard span)
+  if(mediaRecorder.state==='recording'){
+    mediaRecorder.pause();
+    pauseStart=Date.now(); clearInterval(timerInt);
+    $('#pause').textContent='Resume';
+    $('#timer').style.opacity='.5';
+    status.textContent='Paused';
+  }else if(mediaRecorder.state==='paused'){
+    mediaRecorder.resume();
+    startTime+=Date.now()-pauseStart;   // exclude paused span from elapsed
+    timerInt=setInterval(()=>$('#timerText').textContent=fmtTime(Date.now()-startTime),250);
+    $('#pause').textContent='Pause';
+    $('#timer').style.opacity='1';
+    status.textContent='Recording…';
+  }
+});
+function runCountdown(){
+  if(countSecs<=0){ startRecording(); return; }
+  const ov=$('#count'), num=ov.querySelector('b');
+  let n=countSecs;
+  $('#rec').disabled=true;
+  ov.style.display='flex'; num.textContent=n;
+  // restart pop animation each tick
+  const tick=()=>{ num.style.animation='none'; void num.offsetWidth; num.style.animation=''; num.textContent=n; };
+  tick();
+  const iv=setInterval(()=>{
+    n--;
+    if(n<=0){ clearInterval(iv); ov.style.display='none'; $('#rec').disabled=false; startRecording(); }
+    else tick();
+  },1000);
+}
+function fmtTime(ms){const s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function startRecording(){
+  let ow,oh;
+  if(sourceMode==='camera' || sourceMode==='multi'){
+    // camera/multi preview loop is already drawing into the canvas at output size
+    ow=canvas.width; oh=canvas.height;
+  }else{
+    const r=videoRect();
+    const sx=(frame.offsetLeft-r.x)/r.w*r.vw;
+    const sy=(frame.offsetTop -r.y)/r.h*r.vh;
+    const sw=frame.offsetWidth /r.w*r.vw;
+    const sh=frame.offsetHeight/r.h*r.vh;
+    ({ow,oh}=outputDims());
+    canvas.width=ow; canvas.height=oh;
+    const ctx=canvas.getContext('2d');
+    const bgStyle=$('#bg').value;
+    function drawFit(){
+      const vw=preview.videoWidth, vh=preview.videoHeight;
+      if(bgStyle==='blur'){
+        const s=Math.max(ow/vw,oh/vh); const dw=vw*s, dh=vh*s; // cover
+        ctx.filter='blur(28px)'; ctx.globalAlpha=.85;
+        ctx.drawImage(preview,(ow-dw)/2,(oh-dh)/2,dw,dh);
+        ctx.filter='none'; ctx.globalAlpha=1;
+        ctx.fillStyle='rgba(0,0,0,.32)'; ctx.fillRect(0,0,ow,oh);
+      }else if(bgStyle==='gradient'){
+        const g=ctx.createLinearGradient(0,0,0,oh); g.addColorStop(0,'#1a1c22'); g.addColorStop(1,'#070708');
+        ctx.fillStyle=g; ctx.fillRect(0,0,ow,oh);
+      }else{ ctx.fillStyle='#000'; ctx.fillRect(0,0,ow,oh); }
+      const s=Math.min(ow/vw,oh/vh); const dw=vw*s, dh=vh*s;
+      ctx.drawImage(preview,(ow-dw)/2,(oh-dh)/2,dw,dh);
+    }
+    (function draw(){
+      if(camStream && camLayout==='split'){
+        // #10 split / stack — screen on top, camera below
+        ctx.fillStyle='#000'; ctx.fillRect(0,0,ow,oh);
+        const splitY=Math.round(oh*0.62);
+        drawCoverSub(ctx, preview, sx,sy,sw,sh, 0,0,ow,splitY);
+        const cs=camSource();
+        if(cs.w) drawCover(ctx, cs.el, cs.w, cs.h, 0,splitY, ow, oh-splitY);
+      }else{
+        if(mode==='fit') drawFit();
+        else ctx.drawImage(preview, sx,sy,sw,sh, 0,0,ow,oh);
+        // webcam bubble overlay (shape + optional bg-removal)
+        if(camStream && camLayout==='bubble' && bubble.style.display==='block' && camVid.videoWidth){
+          const bx=(bubble.offsetLeft-frame.offsetLeft)/frame.offsetWidth*ow;
+          const by=(bubble.offsetTop -frame.offsetTop )/frame.offsetHeight*oh;
+          const bd=bubble.offsetWidth/frame.offsetWidth*ow;
+          const cs=camSource();
+          if(cs.w){
+            const side=Math.min(cs.w,cs.h), csx=(cs.w-side)/2, csy=(cs.h-side)/2;
+            if(bgRemove){
+              ctx.drawImage(cs.el, csx,csy,side,side, bx,by,bd,bd); // float face, no border
+            }else{
+              ctx.save(); shapePath(ctx,bx,by,bd,bubbleShape); ctx.clip();
+              ctx.drawImage(cs.el, csx,csy,side,side, bx,by,bd,bd);
+              ctx.restore();
+              ctx.save(); shapePath(ctx,bx+1,by+1,bd-2,bubbleShape);
+              ctx.lineWidth=Math.max(2,bd*0.012); ctx.strokeStyle='rgba(255,255,255,.92)'; ctx.stroke(); ctx.restore();
+            }
+          }
+        }
+      }
+      rafId=requestAnimationFrame(draw);
+    })();
+  }
+
+  // build combined stream
+  const out=canvas.captureStream(30);
+  // mix audio
+  const tracks=[];
+  audioCtx=new AudioContext(); const dest=audioCtx.createMediaStreamDestination();
+  let any=false;
+  // system audio: screen mode = displayStream; multi mode = first source that carries audio
+  let sysTracks=[];
+  if(sourceMode==='multi'){ const a=multiStreams.find(m=>m.stream.getAudioTracks().length); if(a) sysTracks=a.stream.getAudioTracks(); }
+  else if(displayStream){ sysTracks=displayStream.getAudioTracks(); }
+  if($('#sys').checked && sysTracks.length){
+    audioCtx.createMediaStreamSource(new MediaStream(sysTracks)).connect(dest); any=true;
+  }
+  if($('#mic').checked && micStream){
+    audioCtx.createMediaStreamSource(micStream).connect(dest); any=true;
+  }
+  if(any) dest.stream.getAudioTracks().forEach(t=>out.addTrack(t));
+
+  chunks=[];
+  const mime=pickMime();
+  mediaRecorder=new MediaRecorder(out, mime?{mimeType:mime,videoBitsPerSecond:8e6}:{videoBitsPerSecond:8e6});
+  mediaRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  mediaRecorder.onstop=async()=>{
+    cancelAnimationFrame(rafId);
+    const actual=mediaRecorder.mimeType||mime||'video/webm';
+    const blob=new Blob(chunks,{type:actual});
+    const ext=actual.includes('mp4')?'mp4':'webm';
+    const id=Date.now();
+    const t=new Date();
+    const stamp=`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+    const retakes=mergeRetakes(retakeCuts);
+    const clip={id,blob,
+      label:`${ratioW}:${ratioH} · ${ow}×${oh} · ${stamp}`,
+      file:`reframe-${ratioW}x${ratioH}-${id}.${ext}`,
+      retakeCuts:retakes};
+    await saveClip(clip); renderRecs();
+    $('#dlbox').innerHTML=`<p class="hint">✅ Saved to Recordings${retakes.length?` — ${retakes.length} retake(s) auto-trimmed in the editor`:''}. Preview &amp; download below.</p>`;
+  };
+  mediaRecorder.start();
+  $('#rec').innerHTML='<span class="rec-dot"></span>Stop recording';
+  $('#rec').classList.add('recording');
+  $('#pause').textContent='Pause'; $('#pause').style.display='flex';
+  $('#takeRow').style.display='flex'; $('#takeHint').style.display='block';
+  status.textContent=`Recording ${ow}×${oh} · ${ratioW}:${ratioH}`;
+  frame.style.borderColor='var(--danger)';
+  // reset retake state for this take
+  if(retakeIv){ clearInterval(retakeIv); retakeIv=null; }
+  retakeCuts=[]; lastKeepT=0; retakeBusy=false;
+  // live timer
+  startTime=Date.now();
+  $('#timer').classList.add('on'); $('#timerText').textContent='0:00';
+  clearInterval(timerInt);
+  timerInt=setInterval(()=>$('#timerText').textContent=fmtTime(Date.now()-startTime),250);
+}
+function stopRecording(){
+  // tear down any in-flight retake count-in BEFORE stopping, so it can't fire late
+  if(retakeIv){
+    clearInterval(retakeIv); retakeIv=null;
+    // honor the retake the user started: record the discard now (still aligned while recording)
+    if(retakeBusy && mediaRecorder && mediaRecorder.state==='recording') retakeCuts.push({start:lastKeepT, end:recElapsed()});
+  }
+  retakeBusy=false; $('#count').style.display='none';
+  if(mediaRecorder&&mediaRecorder.state!=='inactive') mediaRecorder.stop();
+  $('#rec').textContent='Start recording';
+  $('#rec').classList.remove('recording');
+  $('#pause').style.display='none'; $('#timer').style.opacity='1';
+  $('#takeRow').style.display='none'; $('#takeHint').style.display='none';
+  frame.style.borderColor='var(--accent)';
+  clearInterval(timerInt); $('#timer').classList.remove('on');
+  status.textContent='Stopped — saved to Recordings.';
+}
+
+/* ---------- live retake / keep ("scratch that") ---------- */
+function mergeRetakes(arr){ // merge overlapping/adjacent discard spans, sorted
+  const s=arr.filter(c=>c.end>c.start+0.05).map(c=>({start:c.start,end:c.end})).sort((a,b)=>a.start-b.start);
+  const out=[]; for(const c of s){ const last=out[out.length-1];
+    if(last && c.start<=last.end+0.05) last.end=Math.max(last.end,c.end); else out.push({...c}); }
+  return out;
+}
+function markKeep(){
+  if(!mediaRecorder||mediaRecorder.state!=='recording') return;
+  lastKeepT=recElapsed();
+  flashStatus('✓ Keep point set — safe up to here.');
+}
+function doRetake(){
+  if(!mediaRecorder||mediaRecorder.state!=='recording'||retakeBusy) return;
+  retakeBusy=true;
+  const num=$('#count').querySelector('b'); const ov=$('#count');
+  let n=3; ov.style.display='flex'; num.textContent=n;
+  const tick=()=>{ num.style.animation='none'; void num.offsetWidth; num.style.animation=''; num.textContent=n; };
+  tick();
+  retakeIv=setInterval(()=>{
+    n--;
+    if(n<=0){ clearInterval(retakeIv); retakeIv=null; ov.style.display='none';
+      // discard everything from the last keep point up to now (flub + count-in) — only if still recording
+      if(mediaRecorder && mediaRecorder.state==='recording') retakeCuts.push({start:lastKeepT, end:recElapsed()});
+      retakeBusy=false;
+      flashStatus('↺ Take again — go!');
+    } else tick();
+  },1000);
+  status.textContent='↺ Retaking from last keep point…';
+}
+function flashStatus(msg){ status.textContent=msg; }
+$('#keepBtn').addEventListener('click', markKeep);
+$('#retakeBtn').addEventListener('click', doRetake);
+// hotkeys while recording (ignore when typing in a field)
+document.addEventListener('keydown', e=>{
+  if(/INPUT|SELECT|TEXTAREA/.test((e.target.tagName||'')) ) return;
+  if(!mediaRecorder||mediaRecorder.state==='inactive') return;
+  const k=e.key.toLowerCase();
+  if(k==='k'){ e.preventDefault(); markKeep(); }
+  else if(k==='r'){ e.preventDefault(); doRetake(); }
+  else if(k==='p'){ e.preventDefault(); $('#pause').click(); }
+});
+
+/* ---------- init ---------- */
+openDB().then(d=>{db=d;renderRecs();}).catch(e=>console.error('DB init failed',e));
+</script>
+</body>
+</html>

@@ -296,7 +296,14 @@ kbd{font-family:var(--mono);font-size:.72em;font-weight:600;background:rgba(255,
 .dl-mac.is-soon{cursor:not-allowed}
 .soon-pill{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
   color:var(--accent-bright);background:var(--accent-soft);border:1px solid rgba(94,106,210,.4);padding:3px 8px;border-radius:100px;margin-left:4px}
-.dl-foot{margin-top:30px;color:var(--muted);font-size:14px}
+.dl-divider{display:flex;align-items:center;gap:14px;margin:30px auto 26px;max-width:420px;color:var(--faint);font-size:12px;text-transform:uppercase;letter-spacing:.14em;font-family:var(--mono)}
+.dl-divider::before,.dl-divider::after{content:"";flex:1;height:1px;background:var(--line-2)}
+.dl-try{margin:0 auto}
+.dl-foot{margin-top:18px;color:var(--muted);font-size:14px}
+.editor-try{display:inline-flex;align-items:center;gap:7px;margin-top:26px;font-weight:600;font-size:15px;color:var(--accent-bright);transition:.18s var(--ease)}
+.editor-try span{transition:transform .18s var(--ease)}
+.editor-try:hover{color:#c3c9ff}
+.editor-try:hover span{transform:translateX(4px)}
 
 /* ---------- footer ---------- */
 .footer{border-top:1px solid var(--line);margin-top:60px;background:rgba(255,255,255,.012)}

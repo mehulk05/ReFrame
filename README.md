@@ -8,10 +8,13 @@ juggling. Webcam bubble, multi-source capture, live retake, and a built-in edito
 
 Zero build step — pure static HTML/CSS/JS.
 
-- `index.html` — markup
+- `index.html` — landing markup
 - `styles.css` — dark, Linear/Vercel-grade theme (indigo accent)
 - `app.js` — WebGL hero (Three.js via CDN), scroll reveals, motion graphics
 - `favicon.svg`, `og.svg` — brand assets
+- `app/` — the live web app: the recorder (`app/index.html`) and editor (`app/editor.html`),
+  served at **`/app`**. The landing page's "Try in browser" buttons link here. Screen capture
+  needs HTTPS, which the Vercel deployment provides.
 
 Fonts: **Clash Display** (Fontshare) for display, **Inter** + **JetBrains Mono** (Google) for body/mono.
 

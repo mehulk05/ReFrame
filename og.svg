@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="'Inter',system-ui,sans-serif">
+  <defs>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5e6ad2"/><stop offset="1" stop-color="#8b94f0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="0%" r="80%">
+      <stop offset="0" stop-color="#5e6ad2" stop-opacity=".34"/><stop offset="60%" stop-color="#5e6ad2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="em" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8b94f0"/><stop offset="1" stop-color="#c3c9ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="#08090a"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <g stroke="#ffffff" stroke-opacity=".04">
+    <path d="M0 90H1200M0 180H1200M0 270H1200M0 360H1200M0 450H1200M0 540H1200"/>
+    <path d="M120 0V630M240 0V630M360 0V630M480 0V630M600 0V630M720 0V630M840 0V630M960 0V630M1080 0V630"/>
+  </g>
+
+  <!-- decorative crop frames -->
+  <rect x="905" y="150" width="180" height="320" rx="14" fill="none" stroke="#8b94f0" stroke-opacity=".55" stroke-width="3"/>
+  <rect x="845" y="360" width="150" height="120" rx="12" fill="none" stroke="#5e6ad2" stroke-opacity=".4" stroke-width="3"/>
+
+  <g transform="translate(96,150)">
+    <rect width="56" height="56" rx="15" fill="url(#mark)"/>
+    <rect x="9" y="9" width="38" height="38" rx="9.5" fill="none" stroke="#fff" stroke-opacity=".92" stroke-width="3.6"/>
+    <rect x="20.5" y="20.5" width="15" height="15" rx="4" fill="#fff"/>
+    <text x="74" y="40" fill="#ededef" font-size="30" font-weight="600" letter-spacing="-.5">ReFrame</text>
+  </g>
+
+  <text x="96" y="318" fill="#ededef" font-size="78" font-weight="700" letter-spacing="-3">Record any screen.</text>
+  <text x="96" y="406" font-size="78" font-weight="700" letter-spacing="-3"><tspan fill="#ededef">In </tspan><tspan fill="url(#em)" font-style="italic">any</tspan><tspan fill="#ededef"> shape.</tspan></text>
+
+  <text x="98" y="470" fill="#b4b5bd" font-size="27" font-weight="400">Live aspect-ratio screen recorder · crop frame · webcam bubble · editor</text>
+
+  <g transform="translate(96,520)" font-family="'JetBrains Mono',monospace" font-size="22" font-weight="600">
+    <rect width="92" height="42" rx="10" fill="#5e6ad2" fill-opacity=".14" stroke="#5e6ad2" stroke-opacity=".5"/>
+    <text x="20" y="28" fill="#cdd2f7">9:16</text>
+    <rect x="104" width="74" height="42" rx="10" fill="#ffffff" fill-opacity=".05" stroke="#ffffff" stroke-opacity=".12"/>
+    <text x="120" y="28" fill="#b4b5bd">1:1</text>
+    <rect x="190" width="74" height="42" rx="10" fill="#ffffff" fill-opacity=".05" stroke="#ffffff" stroke-opacity=".12"/>
+    <text x="206" y="28" fill="#b4b5bd">4:5</text>
+    <rect x="276" width="92" height="42" rx="10" fill="#ffffff" fill-opacity=".05" stroke="#ffffff" stroke-opacity=".12"/>
+    <text x="296" y="28" fill="#b4b5bd">16:9</text>
+  </g>
+</svg>

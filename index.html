@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReFrame — Record any screen, in any shape</title>
+<meta name="description" content="ReFrame is a live aspect-ratio screen recorder. Drag a ratio-locked crop frame over your screen and record vertical, square, or wide — no window juggling. Webcam bubble, multi-source capture, live retake, and a built-in editor." />
+<meta name="theme-color" content="#08090a" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="ReFrame — Record any screen, in any shape" />
+<meta property="og:description" content="A live aspect-ratio screen recorder with a draggable crop frame, webcam bubble, multi-source capture, live retake, and a built-in editor." />
+<meta property="og:image" content="./og.svg" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+
+<!-- mark JS available so reveal animations only hide content when they can be un-hidden -->
+<script>document.documentElement.classList.add('js');</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin />
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700,500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+
+<!-- ambient layers -->
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-glow" aria-hidden="true"></div>
+<div class="bg-grain" aria-hidden="true"></div>
+
+<!-- ===== NAV ===== -->
+<header class="nav" id="nav">
+  <a class="brand" href="#top" aria-label="ReFrame home">
+    <span class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="4.2" stroke="white" stroke-width="1.7" stroke-opacity=".9"/><rect x="8.4" y="8.4" width="7.2" height="7.2" rx="1.8" fill="white" fill-opacity=".95"/></svg>
+    </span>
+    <span class="brand-name">ReFrame</span>
+  </a>
+  <nav class="nav-links" aria-label="Primary">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="#editor">Editor</a>
+    <a href="#download">Download</a>
+  </nav>
+  <a href="#download" class="btn btn-sm btn-light">Get ReFrame</a>
+</header>
+
+<main id="top">
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <canvas id="scene" aria-hidden="true"></canvas>
+
+    <div class="hero-inner">
+      <div class="eyebrow reveal" data-reveal>
+        <span class="rec-dot"></span> Live aspect-ratio screen recorder
+      </div>
+
+      <h1 class="hero-title">
+        <span class="line reveal" data-reveal>Record any screen.</span>
+        <span class="line reveal" data-reveal data-delay="1">In <em>any</em> shape.</span>
+      </h1>
+
+      <p class="hero-sub reveal" data-reveal data-delay="2">
+        Drag a ratio-locked crop frame over your screen and capture vertical, square or
+        wide — pixel-perfect, no window juggling. Webcam bubble, multi-source capture,
+        live retake and a built-in editor, all running locally.
+      </p>
+
+      <div class="hero-cta reveal" data-reveal data-delay="3">
+        <a href="#download" class="btn btn-light btn-lg">
+          <svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v6.7H3V5.5Zm0 13L10.2 19.5v-6.6H3v5.6Zm8.5 1.2L21 21V12.9h-9.5v6.8Zm0-15.4V11H21V3l-9.5 1.3Z"/></svg>
+          Download for Windows
+        </a>
+        <span class="btn btn-ghost btn-lg is-soon" aria-disabled="true">
+          <svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.7 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8ZM14.4 6.1c.6-.8 1-1.9.9-3-1 .1-2.1.7-2.8 1.5-.6.7-1.1 1.8-1 2.8 1.1.1 2.2-.5 2.9-1.3Z"/></svg>
+          macOS — coming soon
+        </span>
+      </div>
+
+      <div class="hero-meta reveal" data-reveal data-delay="4">
+        <span><b>9:16</b> · <b>1:1</b> · <b>4:5</b> · <b>16:9</b> · <b>3:4</b></span>
+        <span class="dot-sep"></span>
+        <span>MP4 export</span>
+        <span class="dot-sep"></span>
+        <span>100% local &amp; private</span>
+      </div>
+    </div>
+
+    <div class="scroll-cue reveal" data-reveal data-delay="5" aria-hidden="true">
+      <span></span>
+    </div>
+  </section>
+
+  <!-- ===== RATIO MARQUEE ===== -->
+  <section class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span>VERTICAL 9:16</span><i></i>
+      <span>SQUARE 1:1</span><i></i>
+      <span>PORTRAIT 4:5</span><i></i>
+      <span>WIDESCREEN 16:9</span><i></i>
+      <span>CLASSIC 3:4</span><i></i>
+      <span>VERTICAL 9:16</span><i></i>
+      <span>SQUARE 1:1</span><i></i>
+      <span>PORTRAIT 4:5</span><i></i>
+      <span>WIDESCREEN 16:9</span><i></i>
+      <span>CLASSIC 3:4</span><i></i>
+    </div>
+  </section>
+
+  <!-- ===== THE PROBLEM / PITCH ===== -->
+  <section class="pitch">
+    <div class="pitch-inner reveal" data-reveal>
+      <p class="pitch-text">
+        A 16:9 desktop never fits a vertical feed. ReFrame solves it at the source —
+        <span class="hl">you record the shape you publish</span>, so there's no cropping,
+        no black bars and no re-shooting.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== FEATURES ===== -->
+  <section id="features" class="section">
+    <div class="section-head reveal" data-reveal>
+      <span class="kicker">Features</span>
+      <h2>Everything you need to capture, polish and publish.</h2>
+    </div>
+
+    <div class="bento">
+      <!-- Big: crop frame -->
+      <article class="card card-lg reveal" data-reveal>
+        <div class="card-visual frame-visual">
+          <div class="fv-screen">
+            <div class="fv-bar"><i></i><i></i><i></i></div>
+            <div class="fv-content"></div>
+            <div class="fv-frame"><span class="fv-badge">9:16</span><span class="fv-grip"></span></div>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3>Live aspect-ratio crop frame</h3>
+          <p>Drag a ratio-locked frame anywhere on your screen — only what's inside is recorded, at the exact output resolution. Switch between <b>9:16, 1:1, 4:5, 16:9</b> and <b>3:4</b> on the fly.</p>
+        </div>
+      </article>
+
+      <!-- Webcam bubble -->
+      <article class="card reveal" data-reveal data-delay="1">
+        <div class="card-visual bubble-visual">
+          <div class="bv-stage">
+            <div class="bv-bubble"></div>
+            <div class="bv-ring"></div>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3>Webcam bubble &amp; selfie mode</h3>
+          <p>A draggable PiP — circle, rounded or square — with real-time background removal, split &amp; stack layouts, plus a full-frame selfie mode with zoom and mirror.</p>
+        </div>
+      </article>
+
+      <!-- Multi-source -->
+      <article class="card reveal" data-reveal data-delay="2">
+        <div class="card-visual multi-visual">
+          <span class="mv-pane mv-1"></span>
+          <span class="mv-pane mv-2"></span>
+          <span class="mv-pane mv-3"></span>
+        </div>
+        <div class="card-body">
+          <h3>Multi-source capture</h3>
+          <p>Combine up to three screens or windows on a single canvas — auto-tiled, side-by-side or stacked. System audio is taken from the first source to avoid echo.</p>
+        </div>
+      </article>
+
+      <!-- Live retake (wide) -->
+      <article class="card card-wide reveal" data-reveal>
+        <div class="card-body">
+          <span class="tag-pill"><span class="rec-dot"></span> while recording</span>
+          <h3>Live Retake — "scratch that"</h3>
+          <p>Fluffed a line? Press <kbd>K</kbd> to keep a safe point, <kbd>R</kbd> to scrap back to it with a 3-2-1 count-in — all in one continuous take. Discarded spans are skipped automatically on export.</p>
+        </div>
+        <div class="card-visual retake-visual">
+          <div class="rv-timeline">
+            <span class="rv-seg keep"></span>
+            <span class="rv-seg cut"></span>
+            <span class="rv-seg keep"></span>
+            <span class="rv-head"></span>
+          </div>
+          <div class="rv-keys"><kbd>K</kbd> keep <kbd>R</kbd> retake <kbd>P</kbd> pause</div>
+        </div>
+      </article>
+
+      <!-- Audio -->
+      <article class="card reveal" data-reveal data-delay="1">
+        <div class="card-visual audio-visual">
+          <div class="av-bars" id="avBars"></div>
+        </div>
+        <div class="card-body">
+          <h3>Studio-grade audio</h3>
+          <p>Mic with device picker and a live level meter, system audio, and noise suppression — all mixed together in real time through the Web Audio engine.</p>
+        </div>
+      </article>
+
+      <!-- Local first -->
+      <article class="card reveal" data-reveal data-delay="2">
+        <div class="card-visual local-visual">
+          <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <rect x="10" y="14" width="44" height="30" rx="4" stroke="currentColor" stroke-width="2"/>
+            <path d="M22 50h20M28 44v6M36 44v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M32 22v9m0 0 3.4-3.4M32 31l-3.4-3.4" stroke="var(--accent-bright)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Local &amp; private by default</h3>
+          <p>Recordings are saved on your machine in IndexedDB and nothing is ever uploaded. Runs in the browser, or as a native desktop app for guaranteed MP4 and system-audio loopback.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <section id="how" class="section">
+    <div class="section-head reveal" data-reveal>
+      <span class="kicker">How it works</span>
+      <h2>Three moves from screen to scroll-stopping clip.</h2>
+    </div>
+
+    <ol class="steps">
+      <li class="step reveal" data-reveal>
+        <span class="step-num">01</span>
+        <h3>Pick a ratio</h3>
+        <p>Choose 9:16 for Reels &amp; Shorts, 1:1 for the grid, 16:9 for YouTube — and set your output resolution.</p>
+      </li>
+      <li class="step reveal" data-reveal data-delay="1">
+        <span class="step-num">02</span>
+        <h3>Drag the frame</h3>
+        <p>Position the ratio-locked crop frame over exactly what matters. Add a webcam bubble or extra screens.</p>
+      </li>
+      <li class="step reveal" data-reveal data-delay="2">
+        <span class="step-num">03</span>
+        <h3>Record &amp; export</h3>
+        <p>Count-in, record, retake on the fly, trim in the editor, then export to MP4 — or every ratio at once.</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ===== EDITOR ===== -->
+  <section id="editor" class="section editor-section">
+    <div class="editor-grid">
+      <div class="editor-copy reveal" data-reveal>
+        <span class="kicker">Built-in editor</span>
+        <h2>Cut it tight without leaving the app.</h2>
+        <p class="lede">No round-trips to a heavy NLE. Trim, cut and caption right where you recorded, then re-export to every format.</p>
+        <ul class="checklist">
+          <li>Dual-handle trim &amp; multi-region drag-to-cut</li>
+          <li>Audio waveform behind the timeline</li>
+          <li>Timed, positioned captions — size &amp; colour</li>
+          <li>Annotations: draggable boxes &amp; arrows, baked in</li>
+          <li>Speed, brightness, contrast &amp; saturation</li>
+          <li><b>Multi-ratio re-export</b> — one take, every shape, with blur fill</li>
+        </ul>
+      </div>
+
+      <div class="editor-visual reveal" data-reveal data-delay="1">
+        <div class="ev-window">
+          <div class="ev-bar"><i></i><i></i><i></i><span>editor.html</span></div>
+          <div class="ev-preview">
+            <div class="ev-caption">Reframe everything ✦</div>
+          </div>
+          <div class="ev-timeline">
+            <div class="ev-wave"></div>
+            <span class="ev-cut" style="left:24%"></span>
+            <span class="ev-cut" style="left:58%;width:11%"></span>
+            <span class="ev-playhead"></span>
+          </div>
+          <div class="ev-ratios">
+            <span class="on">9:16</span><span>1:1</span><span>4:5</span><span>16:9</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== DOWNLOAD ===== -->
+  <section id="download" class="section download">
+    <div class="dl-card reveal" data-reveal>
+      <div class="dl-glow" aria-hidden="true"></div>
+      <span class="kicker">Download</span>
+      <h2>Bring ReFrame to your desktop.</h2>
+      <p class="lede">A native build for guaranteed MP4 export, system-audio loopback and a frameless capture experience.</p>
+
+      <div class="dl-buttons">
+        <a href="#" class="dl-btn dl-win" data-platform="windows">
+          <svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.5v6.7H3V5.5Zm0 13L10.2 19.5v-6.6H3v5.6Zm8.5 1.2L21 21V12.9h-9.5v6.8Zm0-15.4V11H21V3l-9.5 1.3Z"/></svg>
+          <span class="dl-text"><b>Download for Windows</b><small>Windows 10 &amp; 11 · .exe installer</small></span>
+        </a>
+        <span class="dl-btn dl-mac is-soon" aria-disabled="true">
+          <svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.7 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8ZM14.4 6.1c.6-.8 1-1.9.9-3-1 .1-2.1.7-2.8 1.5-.6.7-1.1 1.8-1 2.8 1.1.1 2.2-.5 2.9-1.3Z"/></svg>
+          <span class="dl-text"><b>macOS</b><small>Universal · coming soon</small></span>
+          <span class="soon-pill">Soon</span>
+        </span>
+      </div>
+
+      <p class="dl-foot">Prefer the browser? ReFrame runs as a local web app too — no install required.</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="4.2" stroke="white" stroke-width="1.7" stroke-opacity=".9"/><rect x="8.4" y="8.4" width="7.2" height="7.2" rx="1.8" fill="white" fill-opacity=".95"/></svg>
+      </span>
+      <div>
+        <b>ReFrame</b>
+        <small>Live aspect-ratio screen recorder &amp; editor</small>
+      </div>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#editor">Editor</a>
+      <a href="#download">Download</a>
+    </nav>
+    <p class="footer-copy">© <span id="yr">2026</span> ReFrame. Built by Mehul Kothari.</p>
+  </div>
+</footer>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

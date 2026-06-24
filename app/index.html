@@ -134,6 +134,24 @@
   .reccard .meta b{cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px;transition:.13s}
   .reccard .meta b:hover{background:var(--elev)}
   .reccard .meta input{font-size:12px;font-weight:600;color:var(--txt);background:var(--bg);border:1px solid var(--accent);border-radius:5px;padding:2px 5px;width:100%;font-family:inherit;outline:none}
+  /* desktop source picker */
+  #srcPicker{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(6,7,8,.66);backdrop-filter:blur(6px)}
+  #srcPicker.on{display:flex}
+  .picker-box{width:min(900px,92vw);max-height:84vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r-lg);box-shadow:0 24px 80px rgba(0,0,0,.6);overflow:hidden}
+  .picker-head{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line)}
+  .picker-head h3{margin:0;font-size:14px;font-weight:600;letter-spacing:-.01em}
+  .picker-tabs{display:flex;gap:6px;margin-left:6px}
+  .picker-tabs .chip{padding:6px 12px}
+  .picker-close{margin-left:auto;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;font-family:inherit;line-height:1;padding:5px 9px;border-radius:7px}
+  .picker-close:hover{color:var(--txt);background:var(--elev)}
+  .picker-grid{padding:16px 18px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:14px}
+  .picker-card{border:1px solid var(--line);background:var(--panel-2);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:.13s;text-align:left;padding:0;font-family:inherit}
+  .picker-card:hover{border-color:var(--accent);background:var(--elev);transform:translateY(-1px)}
+  .picker-card .thumb{width:100%;aspect-ratio:16/10;object-fit:cover;background:#000;display:block;border-bottom:1px solid var(--line)}
+  .picker-card .pc-meta{display:flex;align-items:center;gap:7px;padding:8px 10px}
+  .picker-card .pc-meta img{width:16px;height:16px;border-radius:3px;flex:none;object-fit:contain}
+  .picker-card .pc-name{font-size:12px;color:var(--txt-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .picker-empty{padding:48px;color:var(--muted);text-align:center;grid-column:1/-1;font-size:13px}
 </style>
 </head>
 <body>
@@ -314,6 +332,22 @@
   </div>
 </div>
 
+<!-- desktop source picker (Electron only) -->
+<div id="srcPicker">
+  <div class="picker-box">
+    <div class="picker-head">
+      <h3>Choose what to share</h3>
+      <div class="picker-tabs" id="pickerTabs">
+        <div class="chip on" data-k="all">All</div>
+        <div class="chip" data-k="screen">Screens</div>
+        <div class="chip" data-k="window">Windows</div>
+      </div>
+      <button class="picker-close" id="pickerClose" title="Cancel (Esc)">✕</button>
+    </div>
+    <div class="picker-grid" id="pickerGrid"></div>
+  </div>
+</div>
+
 <script>
 const $ = s => document.querySelector(s);
 let ratioW=9, ratioH=16, countSecs=3, mode='crop', pauseStart=0;
@@ -474,8 +508,8 @@ function drawMultiFrame(){
     if(r.x===0){ ctx.moveTo(0,r.y); ctx.lineTo(ow,r.y); } else { ctx.moveTo(r.x,0); ctx.lineTo(r.x,oh); }
     ctx.stroke(); }
 }
-function startMultiPreview(){ canvas.classList.add('live'); canvas.style.display='block'; (function loop(){ drawMultiFrame(); multiRaf=requestAnimationFrame(loop); })(); }
-function stopMultiPreview(){ cancelAnimationFrame(multiRaf); multiRaf=null; canvas.classList.remove('live'); canvas.style.display='none'; }
+function startMultiPreview(){ canvas.classList.add('live'); canvas.style.display='block'; multiRaf=workerInterval(30, drawMultiFrame); }
+function stopMultiPreview(){ if(multiRaf){multiRaf();multiRaf=null;} canvas.classList.remove('live'); canvas.style.display='none'; }
 
 /* ---------- zoom chips (camera) ---------- */
 $('#zoom').addEventListener('click', e=>{
@@ -542,10 +576,10 @@ function shapePath(ctx,x,y,d,shape){
 }
 function startCamPreview(){
   const {ow,oh}=outputDims(); canvas.width=ow; canvas.height=oh;
-  canvas.classList.add('live'); canvas.style.display='block'; // inline style overrides the CSS class
-  (function loop(){ drawCamFrame(); camRaf=requestAnimationFrame(loop); })();
+  canvas.classList.add('live'); canvas.style.display='block';
+  camRaf=workerInterval(30, drawCamFrame);
 }
-function stopCamPreview(){ cancelAnimationFrame(camRaf); camRaf=null; canvas.classList.remove('live'); canvas.style.display='none'; }
+function stopCamPreview(){ if(camRaf){camRaf();camRaf=null;} canvas.classList.remove('live'); canvas.style.display='none'; }
 
 /* ---------- mode chips (crop / fit) ---------- */
 $('#mode').addEventListener('click', e=>{
@@ -783,14 +817,19 @@ $('#pick').addEventListener('click', async ()=>{
   }
 });
 $('#stopShare').addEventListener('click', stopShare);
-function stopShare(){
-  if(mediaRecorder&&mediaRecorder.state!=='inactive') stopRecording();
+// Release the screen/camera source — this is what makes Chrome's "Stop sharing" bar disappear.
+function releaseSource(){
   if(displayStream){displayStream.getTracks().forEach(t=>t.stop());displayStream=null;}
   multiStreams.forEach(m=>m.stream.getTracks().forEach(t=>t.stop())); multiStreams=[];
   if($('#multiList')) renderMultiList();
   stopCamPreview(); stopMultiPreview();
   preview.style.display='none'; frame.style.display='none'; empty.style.display='block';
   $('#rec').disabled=true; $('#stopShare').disabled=true;
+}
+function stopShare(){
+  // if a recording is in flight, stopRecording() saves it AND releases the source below
+  if(mediaRecorder&&mediaRecorder.state!=='inactive'){ stopRecording(); return; }
+  releaseSource();
   status.textContent='Stopped.';
 }
 
@@ -880,10 +919,14 @@ function runCountdown(){
 }
 function fmtTime(ms){const s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function startRecording(){
-  let ow,oh;
+  let ow,oh, _outVideoTrack=null, _stopVideoOut=null;
   if(sourceMode==='camera' || sourceMode==='multi'){
     // camera/multi preview loop is already drawing into the canvas at output size
     ow=canvas.width; oh=canvas.height;
+    const cs=canvas.captureStream(30);
+    _outVideoTrack=cs.getVideoTracks()[0];
+    _stopVideoOut=()=>cs.getTracks().forEach(t=>t.stop());
+    recStopDraw=()=>{ if(_stopVideoOut){_stopVideoOut();_stopVideoOut=null;} };
   }else{
     const r=videoRect();
     const sx=(frame.offsetLeft-r.x)/r.w*r.vw;
@@ -894,12 +937,13 @@ function startRecording(){
     canvas.width=ow; canvas.height=oh;
     const ctx=canvas.getContext('2d');
     const bgStyle=$('#bg').value;
-    function drawFit(){
-      const vw=preview.videoWidth, vh=preview.videoHeight;
+    function drawFit(src){
+      const S=src||preview;
+      const vw=S.displayWidth||S.videoWidth, vh=S.displayHeight||S.videoHeight;
       if(bgStyle==='blur'){
         const s=Math.max(ow/vw,oh/vh); const dw=vw*s, dh=vh*s; // cover
         ctx.filter='blur(28px)'; ctx.globalAlpha=.85;
-        ctx.drawImage(preview,(ow-dw)/2,(oh-dh)/2,dw,dh);
+        ctx.drawImage(S,(ow-dw)/2,(oh-dh)/2,dw,dh);
         ctx.filter='none'; ctx.globalAlpha=1;
         ctx.fillStyle='rgba(0,0,0,.32)'; ctx.fillRect(0,0,ow,oh);
       }else if(bgStyle==='gradient'){
@@ -907,18 +951,19 @@ function startRecording(){
         ctx.fillStyle=g; ctx.fillRect(0,0,ow,oh);
       }else{ ctx.fillStyle='#000'; ctx.fillRect(0,0,ow,oh); }
       const s=Math.min(ow/vw,oh/vh); const dw=vw*s, dh=vh*s;
-      ctx.drawImage(preview,(ow-dw)/2,(oh-dh)/2,dw,dh);
+      ctx.drawImage(S,(ow-dw)/2,(oh-dh)/2,dw,dh);
     }
-    function drawFrame(){
+    function drawFrame(src){
+      const S=src||preview;
       if(camStream && camLayout==='split'){
         ctx.fillStyle='#000'; ctx.fillRect(0,0,ow,oh);
         const splitY=Math.round(oh*0.62);
-        drawCoverSub(ctx, preview, sx,sy,sw,sh, 0,0,ow,splitY);
+        drawCoverSub(ctx, S, sx,sy,sw,sh, 0,0,ow,splitY);
         const cs=camSource();
         if(cs.w) drawCover(ctx, cs.el, cs.w, cs.h, 0,splitY, ow, oh-splitY);
       }else{
-        if(mode==='fit') drawFit();
-        else ctx.drawImage(preview, sx,sy,sw,sh, 0,0,ow,oh);
+        if(mode==='fit') drawFit(S);
+        else ctx.drawImage(S, sx,sy,sw,sh, 0,0,ow,oh);
         if(camStream && camLayout==='bubble' && bubble.style.display==='block' && camVid.videoWidth){
           const bx=(bubble.offsetLeft-frame.offsetLeft)/frame.offsetWidth*ow;
           const by=(bubble.offsetTop -frame.offsetTop )/frame.offsetHeight*oh;
@@ -939,21 +984,16 @@ function startRecording(){
         }
       }
     }
-    // requestVideoFrameCallback fires on every decoded video frame regardless of tab visibility —
-    // prevents the recording from freezing when the user switches away from this tab to interact
-    // with the content being captured. Falls back to setInterval for browsers without rVFC support.
-    let _drawId=null;
-    if('requestVideoFrameCallback' in HTMLVideoElement.prototype){
-      (function rVFC(){ drawFrame(); _drawId=preview.requestVideoFrameCallback(rVFC); })();
-      recStopDraw=()=>{ if(_drawId!==null){preview.cancelVideoFrameCallback(_drawId);_drawId=null;} };
-    }else{
-      drawFrame(); _drawId=setInterval(drawFrame,1000/30);
-      recStopDraw=()=>{ clearInterval(_drawId); _drawId=null; };
-    }
+    // Pull frames straight off the capture track and emit via a generator track — keeps
+    // recording alive while the recorder window is occluded (Alt-Tab to another app).
+    const primaryTrack = displayStream ? displayStream.getVideoTracks()[0] : null;
+    ({track:_outVideoTrack, stop:_stopVideoOut} = buildVideoOutput(drawFrame, primaryTrack));
+    recStopDraw=()=>{ if(_stopVideoOut){_stopVideoOut();_stopVideoOut=null;} };
   }
 
   // build combined stream
-  const out=canvas.captureStream(30);
+  const out=new MediaStream();
+  out.addTrack(_outVideoTrack);
   // mix audio
   const tracks=[];
   audioCtx=new AudioContext(); const dest=audioCtx.createMediaStreamDestination();
@@ -1022,7 +1062,8 @@ function stopRecording(){
   $('#takeRow').style.display='none'; $('#takeHint').style.display='none';
   frame.style.borderColor='var(--accent)';
   clearInterval(timerInt); $('#timer').classList.remove('on');
-  status.textContent='Stopped — saved to Recordings.';
+  releaseSource(); // also stop screen-sharing so Chrome's "Stop sharing" bar closes
+  status.textContent='Stopped — saved to Recordings. Screen sharing ended.';
 }
 
 /* ---------- live retake / keep ("scratch that") ---------- */
@@ -1067,6 +1108,90 @@ document.addEventListener('keydown', e=>{
   else if(k==='r'){ e.preventDefault(); doRetake(); }
   else if(k==='p'){ e.preventDefault(); $('#pause').click(); }
 });
+
+/* ---------- worker-driven interval (runs at full rate even in background tabs) ---------- */
+function workerInterval(fps, fn){
+  const src=`var t=setInterval(function(){postMessage(1)},${Math.round(1000/fps)});`;
+  const w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+  w.onmessage=fn; return ()=>w.terminate();
+}
+
+/* ---------- robust recording output ----------
+   The freeze when you Alt-Tab away (the recorder window gets covered/occluded) happens
+   because BOTH the <video> element's frame AND canvas.captureStream() are tied to the
+   window's compositor — which the OS/browser suspends the moment the window is hidden.
+   No timer (even a Worker's) can defeat that, because the frame source itself is frozen.
+
+   Fix: pull frames straight off the capture MediaStreamTrack with MediaStreamTrackProcessor
+   (driven by the media pipeline, not the compositor), composite each one onto the canvas,
+   and emit through a MediaStreamTrackGenerator track — never touching captureStream(). This
+   keeps recording at full rate while the window is occluded. Falls back to the old
+   canvas.captureStream path on engines without WebCodecs insertable streams. */
+function supportsInsertableStreams(){
+  return typeof window.MediaStreamTrackProcessor==='function'
+      && typeof window.MediaStreamTrackGenerator==='function';
+}
+// drawFn(srcFrame|null) composites one frame onto `canvas`. primaryTrack supplies fresh frames.
+function buildVideoOutput(drawFn, primaryTrack){
+  if(primaryTrack && supportsInsertableStreams()){
+    let stopped=false;
+    const srcTrack=primaryTrack.clone();   // independent tap so the live <video> keeps its own frames
+    const generator=new MediaStreamTrackGenerator({kind:'video'});
+    const writer=generator.writable.getWriter();
+    const reader=new MediaStreamTrackProcessor({track:srcTrack}).readable.getReader();
+    (async()=>{
+      while(!stopped){
+        let res; try{ res=await reader.read(); }catch(e){ break; }
+        if(res.done) break;
+        const frame=res.value;
+        try{
+          drawFn(frame);                                            // composite the fresh frame (+overlays)
+          const vf=new VideoFrame(canvas,{timestamp:frame.timestamp||0});
+          try{ await writer.write(vf); } finally{ vf.close(); }      // emit; never via the compositor
+        }catch(e){ /* skip a bad frame, keep recording */ }
+        finally{ frame.close(); }                                   // release GPU frame or the source stalls
+      }
+      try{ await writer.close(); }catch(e){}
+      try{ srcTrack.stop(); }catch(e){}
+    })();
+    return { track:generator, stop:()=>{ stopped=true; try{reader.cancel();}catch(e){} } };
+  }
+  // fallback: timer-driven canvas + captureStream (fine in foreground; may stall when occluded)
+  const stopDraw=workerInterval(30, ()=>drawFn(null));
+  const cs=canvas.captureStream(30);
+  return { track:cs.getVideoTracks()[0], stop:()=>{ stopDraw(); cs.getTracks().forEach(t=>t.stop()); } };
+}
+
+/* ---------- desktop source picker (Electron) ----------
+   In the browser, getDisplayMedia shows Chrome's own picker. In the Electron app there
+   is no native picker, so main.js sends us the list of screens/windows and we show one. */
+if(window.reframe && window.reframe.isDesktop && window.reframe.onPickerSources){
+  let pickerSources=[], pickerFilter='all';
+  const pk=$('#srcPicker'), pkGrid=$('#pickerGrid');
+  const renderPicker=()=>{
+    const list = pickerFilter==='all' ? pickerSources : pickerSources.filter(s=>s.kind===pickerFilter);
+    if(!list.length){ pkGrid.innerHTML='<div class="picker-empty">No '+(pickerFilter==='all'?'sources':pickerFilter+'s')+' available.</div>'; return; }
+    pkGrid.innerHTML='';
+    list.forEach(s=>{
+      const card=document.createElement('button'); card.className='picker-card';
+      const icon = s.icon ? `<img src="${s.icon}" alt="">` : '<span style="width:16px;flex:none"></span>';
+      card.innerHTML=`<img class="thumb" src="${s.thumb||''}" alt="">`+
+                     `<div class="pc-meta">${icon}<span class="pc-name"></span></div>`;
+      card.querySelector('.pc-name').textContent = s.name || (s.kind==='screen'?'Screen':'Window');
+      card.onclick=()=>choosePicker(s.id);
+      pkGrid.appendChild(card);
+    });
+  };
+  const setFilter=k=>{ pickerFilter=k;
+    document.querySelectorAll('#pickerTabs .chip').forEach(c=>c.classList.toggle('on',c.dataset.k===k));
+    renderPicker(); };
+  const choosePicker=id=>{ pk.classList.remove('on'); window.reframe.choosePickerSource(id||null); };
+  $('#pickerTabs').addEventListener('click',e=>{ const c=e.target.closest('.chip'); if(c) setFilter(c.dataset.k); });
+  $('#pickerClose').onclick=()=>choosePicker(null);
+  pk.addEventListener('click',e=>{ if(e.target===pk) choosePicker(null); }); // backdrop click cancels
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && pk.classList.contains('on')) choosePicker(null); });
+  window.reframe.onPickerSources(sources=>{ pickerSources=sources||[]; setFilter('all'); pk.classList.add('on'); });
+}
 
 /* ---------- init ---------- */
 openDB().then(d=>{db=d;renderRecs();}).catch(e=>console.error('DB init failed',e));

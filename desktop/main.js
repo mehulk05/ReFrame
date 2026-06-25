@@ -23,6 +23,8 @@ let lastGuideRect = null;
 let lastSetBounds = null;  // bounds WE set on the overlay (to distinguish our setBounds from a user drag)
 let overlayDragging = false; // user is manually dragging the overlay (lock interactivity, suppress repositioning)
 let hudWin = null;        // floating recording control HUD (excluded from capture)
+let cursorWin = null;     // cursor-highlight overlay (INCLUDED in capture)
+let uioHook = null, uioStarted = false; // optional global mouse hook for click ripples
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -55,7 +57,9 @@ function createWindow() {
     if (winPoll) { clearInterval(winPoll); winPoll = null; }
     if (overlayWin && !overlayWin.isDestroyed()) overlayWin.destroy();
     if (hudWin && !hudWin.isDestroyed()) hudWin.destroy();
-    overlayWin = null; hudWin = null;
+    if (cursorWin && !cursorWin.isDestroyed()) cursorWin.destroy();
+    if (uioStarted) { try { uioHook.uIOhook.stop(); } catch (e) {} uioStarted = false; }
+    overlayWin = null; hudWin = null; cursorWin = null;
     mainWindow = null;
   });
 }
@@ -274,6 +278,62 @@ app.whenReady().then(() => {
     hudWin.setBounds({ x: Math.round(p.x), y: Math.round(p.y), width: b.width, height: b.height });
   });
 
+  // ── Cursor highlight / click effects ────────────────────────────────────
+  // A fullscreen, transparent, click-through overlay on the captured display.
+  // It is NOT content-protected, so the screen capture includes the highlight
+  // (the user sees it live too). Movement is tracked via forwarded mousemove;
+  // clicks come from an optional global hook (uiohook-napi) for ripples.
+  function ensureCursorFx() {
+    if (cursorWin && !cursorWin.isDestroyed()) return cursorWin;
+    cursorWin = new BrowserWindow({
+      show: false, frame: false, transparent: true, resizable: false, movable: false,
+      focusable: false, skipTaskbar: true, hasShadow: false, alwaysOnTop: true, fullscreenable: false,
+      webPreferences: { nodeIntegration: true, contextIsolation: false, backgroundThrottling: false },
+    });
+    cursorWin.setIgnoreMouseEvents(true, { forward: true }); // click-through, but still receives mousemove
+    cursorWin.setAlwaysOnTop(true, 'screen-saver');
+    try { cursorWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }); } catch (e) {}
+    // deliberately NO setContentProtection — we WANT it in the recording
+    cursorWin.loadFile('cursorfx.html');
+    cursorWin.on('closed', () => { cursorWin = null; });
+    return cursorWin;
+  }
+  function startClickHook() {
+    if (uioStarted) return;
+    try {
+      if (!uioHook) uioHook = require('uiohook-napi');
+      const { uIOhook, UiohookKey } = uioHook;
+      uIOhook.on('mousedown', (e) => {
+        if (!cursorWin || cursorWin.isDestroyed()) return;
+        const btn = e.button === 2 ? 'right' : 'left'; // 1=left, 2=right
+        cursorWin.webContents.send('cursor:click', btn);
+      });
+      uIOhook.start();
+      uioStarted = true;
+    } catch (e) { /* optional dep missing → ripples just won't fire; movement still works */ }
+  }
+  function stopClickHook() {
+    if (!uioStarted) return;
+    try { uioHook.uIOhook.stop(); } catch (e) {}
+    uioStarted = false;
+  }
+  ipcMain.on('cursor:show', (e, settings) => {
+    const disp = resolveScreenDisplay(); if (!disp) return; // only for screen capture
+    const w = ensureCursorFx();
+    const b = disp.bounds;
+    w.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height });
+    w.setIgnoreMouseEvents(true, { forward: true });
+    if (settings) w.webContents.send('cursor:settings', settings);
+    if (!w.isVisible()) w.showInactive();
+    w.setAlwaysOnTop(true, 'screen-saver');
+    if (settings && settings.ripple) startClickHook(); else stopClickHook();
+  });
+  ipcMain.on('cursor:settings', (e, settings) => {
+    if (cursorWin && !cursorWin.isDestroyed() && settings) cursorWin.webContents.send('cursor:settings', settings);
+    if (settings && settings.ripple) startClickHook(); else stopClickHook();
+  });
+  ipcMain.on('cursor:hide', () => { stopClickHook(); if (cursorWin && !cursorWin.isDestroyed()) cursorWin.hide(); });
+
   createWindow();
 
   app.on('activate', () => {
@@ -285,6 +345,8 @@ app.on('before-quit', () => {
   if (winPoll) { clearInterval(winPoll); winPoll = null; }
   if (overlayWin && !overlayWin.isDestroyed()) overlayWin.destroy();
   if (hudWin && !hudWin.isDestroyed()) hudWin.destroy();
+  if (cursorWin && !cursorWin.isDestroyed()) cursorWin.destroy();
+  if (uioStarted) { try { uioHook.uIOhook.stop(); } catch (e) {} uioStarted = false; }
 });
 
 app.on('window-all-closed', () => {

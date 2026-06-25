@@ -17,4 +17,8 @@ contextBridge.exposeInMainWorld('reframe', {
   hudHide: () => ipcRenderer.send('hud:hide'),
   hudState: (s) => ipcRenderer.send('hud:state', s),
   onHudAction: (cb) => ipcRenderer.on('hud:action', (_e, name) => cb(name)),
+  // cursor highlight / click effects (included in the capture)
+  cursorShow: (settings) => ipcRenderer.send('cursor:show', settings),
+  cursorSettings: (settings) => ipcRenderer.send('cursor:settings', settings),
+  cursorHide: () => ipcRenderer.send('cursor:hide'),
 });

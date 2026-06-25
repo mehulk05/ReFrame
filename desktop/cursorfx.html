@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html,body{margin:0;width:100%;height:100%;background:transparent;overflow:hidden;cursor:none}
+  canvas{display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const { ipcRenderer } = require('electron');
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+let cfg = {
+  enabled: true, style: 'ring', color: '#5e6ad2', color2: '#eb5757',
+  size: 28, opacity: 0.5, trail: false, pulse: true, ripple: true,
+};
+let mx = -9999, my = -9999, seen = false;
+const trail = [];            // {x,y,t}
+const ripples = [];          // {x,y,t,button}
+
+function resize(){
+  canvas.width = Math.round(innerWidth * DPR);
+  canvas.height = Math.round(innerHeight * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+resize();
+addEventListener('resize', resize);
+
+// cursor position (forwarded mousemove reaches us even though the window is click-through)
+addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; seen = true; });
+
+ipcRenderer.on('cursor:settings', (e, s) => { if (s) cfg = Object.assign(cfg, s); });
+ipcRenderer.on('cursor:click', (e, btn) => { if (cfg.ripple && seen) ripples.push({ x: mx, y: my, t: performance.now(), button: btn }); });
+
+function hexA(hex, a){
+  const h = (hex || '#5e6ad2').replace('#',''); const n = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+
+function frame(now){
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  if (cfg.enabled && seen) {
+    const pulse = cfg.pulse ? (1 + Math.sin(now / 380) * 0.14) : 1;
+    const r = cfg.size * pulse;
+
+    // ---- spotlight: dim everything, punch a soft hole at the cursor ----
+    if (cfg.style === 'spotlight') {
+      ctx.fillStyle = `rgba(0,0,0,${0.55 * (cfg.opacity / 0.5)})`;
+      ctx.fillRect(0, 0, innerWidth, innerHeight);
+      const g = ctx.createRadialGradient(mx, my, 0, mx, my, r * 3.2);
+      g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.7, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, r * 3.2, 0, 7); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      // subtle accent ring on the spotlight edge
+      ctx.strokeStyle = hexA(cfg.color, Math.min(1, cfg.opacity + 0.3)); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(mx, my, r * 3.2, 0, 7); ctx.stroke();
+    }
+
+    // ---- trail ----
+    if (cfg.trail) {
+      trail.push({ x: mx, y: my, t: now });
+      while (trail.length && now - trail[0].t > 420) trail.shift();
+      for (const p of trail) {
+        const age = (now - p.t) / 420;            // 0..1
+        ctx.fillStyle = hexA(cfg.color, cfg.opacity * (1 - age) * 0.5);
+        ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.5 * (1 - age * 0.6), 0, 7); ctx.fill();
+      }
+    } else if (trail.length) { trail.length = 0; }
+
+    // ---- main highlight (circle / ring) ----
+    if (cfg.style === 'circle') {
+      ctx.fillStyle = hexA(cfg.color, cfg.opacity);
+      ctx.beginPath(); ctx.arc(mx, my, r, 0, 7); ctx.fill();
+    } else if (cfg.style === 'ring') {
+      ctx.strokeStyle = hexA(cfg.color, Math.min(1, cfg.opacity + 0.25));
+      ctx.lineWidth = Math.max(2, r * 0.16);
+      ctx.beginPath(); ctx.arc(mx, my, r, 0, 7); ctx.stroke();
+      ctx.fillStyle = hexA(cfg.color, cfg.opacity * 0.35);
+      ctx.beginPath(); ctx.arc(mx, my, r * 0.85, 0, 7); ctx.fill();
+    }
+  }
+
+  // ---- click ripples ----
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const rp = ripples[i]; const age = (now - rp.t) / 520;
+    if (age >= 1) { ripples.splice(i, 1); continue; }
+    const col = rp.button === 'right' ? cfg.color2 : cfg.color;
+    ctx.strokeStyle = hexA(col, (1 - age) * 0.8);
+    ctx.lineWidth = Math.max(2, cfg.size * 0.18 * (1 - age));
+    ctx.beginPath(); ctx.arc(rp.x, rp.y, cfg.size * (0.6 + age * 2.2), 0, 7); ctx.stroke();
+  }
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

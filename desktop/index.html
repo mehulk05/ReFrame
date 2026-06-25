@@ -309,8 +309,34 @@
       </div>
     </div>
 
+    <div class="sec" id="cursorSec" style="display:none">
+      <h2><span class="n">5</span>Cursor highlight</h2>
+      <div class="toggle">
+        <div>Highlight cursor <small>shows in the recording (desktop)</small></div>
+        <label class="sw"><input type="checkbox" id="curEnable"><span></span></label>
+      </div>
+      <div id="curOpts" style="display:none">
+        <div class="field" style="margin-top:12px">
+          <label>Style</label>
+          <div class="chips" id="curStyle">
+            <div class="chip on" data-s="ring">Ring</div>
+            <div class="chip" data-s="circle">Circle</div>
+            <div class="chip" data-s="spotlight">Spotlight</div>
+          </div>
+        </div>
+        <div class="field"><div class="row" style="justify-content:space-between"><label style="margin:0">Color</label><input type="color" id="curColor" value="#5e6ad2"></div></div>
+        <div class="field"><label>Size</label><div class="row"><input type="range" id="curSize" min="14" max="70" value="28" step="2"><span class="val" id="curSizeV">28</span></div></div>
+        <div class="field"><label>Opacity</label><div class="row"><input type="range" id="curOpacity" min="10" max="100" value="50" step="5"><span class="val" id="curOpacityV">50%</span></div></div>
+        <div class="toggle" style="margin-top:4px"><div>Trail</div><label class="sw"><input type="checkbox" id="curTrail"><span></span></label></div>
+        <div class="toggle" style="margin-top:7px"><div>Pulse</div><label class="sw"><input type="checkbox" id="curPulse" checked><span></span></label></div>
+        <div class="toggle" style="margin-top:7px"><div>Click ripple <small>needs the click hook</small></div><label class="sw"><input type="checkbox" id="curRipple" checked><span></span></label></div>
+        <div class="field" id="curColor2Field" style="margin-top:7px"><div class="row" style="justify-content:space-between"><label style="margin:0">Right-click color</label><input type="color" id="curColor2" value="#eb5757"></div></div>
+        <p class="hint">Applies live while you record. The highlight appears in the video; the floating guide/HUD do not.</p>
+      </div>
+    </div>
+
     <div class="sec">
-      <h2><span class="n">5</span>Capture</h2>
+      <h2><span class="n">6</span>Capture</h2>
       <div class="field">
         <label>Countdown before recording</label>
         <div class="chips" id="countdown">
@@ -1124,6 +1150,7 @@ function startRecording(){
   clearInterval(timerInt);
   timerInt=setInterval(()=>{ const txt=fmtTime(Date.now()-startTime); $('#timerText').textContent=txt; if(isDesktop) window.reframe.hudState({text:txt,paused:false}); },250);
   if(isDesktop){ window.reframe.hudShow(); window.reframe.hudState({text:'0:00',paused:false}); } // floating control HUD (excluded from capture)
+  if(isDesktop && sourceMode==='screen' && $('#curEnable') && $('#curEnable').checked) window.reframe.cursorShow(getCursorSettings());
 }
 function stopRecording(){
   // tear down any in-flight retake count-in BEFORE stopping, so it can't fire late
@@ -1140,7 +1167,7 @@ function stopRecording(){
   $('#takeRow').style.display='none'; $('#takeHint').style.display='none';
   frame.style.borderColor='var(--accent)';
   clearInterval(timerInt); $('#timer').classList.remove('on');
-  if(isDesktop) window.reframe.hudHide();
+  if(isDesktop){ window.reframe.hudHide(); window.reframe.cursorHide(); }
   releaseSource(); // also stop screen-sharing so Chrome's "Stop sharing" bar closes
   status.textContent='Stopped — saved to Recordings. Screen sharing ended.';
 }
@@ -1294,6 +1321,45 @@ if(isDesktop){
     else if(name==='keep'){ markKeep(); }
     else if(name==='retake'){ doRetake(); }
   });
+
+  /* ---------- cursor highlight settings ---------- */
+  $('#cursorSec').style.display='';
+  try{ const saved=JSON.parse(localStorage.getItem('reframe-cursor')||'null'); if(saved){
+    $('#curEnable').checked=!!saved.enabled;
+    document.querySelectorAll('#curStyle .chip').forEach(x=>x.classList.toggle('on',x.dataset.s===(saved.style||'ring')));
+    if(saved.color)$('#curColor').value=saved.color; if(saved.color2)$('#curColor2').value=saved.color2;
+    if(saved.size)$('#curSize').value=saved.size; if(saved.opacity!=null)$('#curOpacity').value=Math.round(saved.opacity*100);
+    $('#curTrail').checked=!!saved.trail; $('#curPulse').checked=saved.pulse!==false; $('#curRipple').checked=saved.ripple!==false;
+  }}catch(e){}
+  function curSyncUI(){ $('#curSizeV').textContent=$('#curSize').value; $('#curOpacityV').textContent=$('#curOpacity').value+'%';
+    $('#curOpts').style.display=$('#curEnable').checked?'block':'none'; }
+  function curSave(){ try{ localStorage.setItem('reframe-cursor',JSON.stringify(getCursorSettings())); }catch(e){} }
+  function curChanged(){ curSyncUI(); curSave();
+    // live update while recording
+    if(mediaRecorder && mediaRecorder.state!=='inactive' && sourceMode==='screen'){
+      if($('#curEnable').checked) window.reframe.cursorShow(getCursorSettings());
+      else window.reframe.cursorHide();
+    }
+  }
+  $('#curEnable').addEventListener('change',curChanged);
+  $('#curStyle').addEventListener('click',e=>{ const c=e.target.closest('.chip'); if(!c)return;
+    document.querySelectorAll('#curStyle .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); curChanged(); });
+  ['curColor','curColor2','curSize','curOpacity'].forEach(id=>$('#'+id).addEventListener('input',curChanged));
+  ['curTrail','curPulse','curRipple'].forEach(id=>$('#'+id).addEventListener('change',curChanged));
+  curSyncUI();
+}
+function getCursorSettings(){
+  return {
+    enabled: $('#curEnable')?.checked || false,
+    style: (document.querySelector('#curStyle .chip.on')||{}).dataset?.s || 'ring',
+    color: $('#curColor')?.value || '#5e6ad2',
+    color2: $('#curColor2')?.value || '#eb5757',
+    size: +($('#curSize')?.value || 28),
+    opacity: (+($('#curOpacity')?.value || 50))/100,
+    trail: $('#curTrail')?.checked || false,
+    pulse: $('#curPulse')?.checked !== false,
+    ripple: $('#curRipple')?.checked !== false,
+  };
 }
 
 /* ---------- init ---------- */

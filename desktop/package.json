@@ -18,7 +18,8 @@
     "sharp": "^0.35.2"
   },
   "optionalDependencies": {
-    "node-window-manager": "^2.2.4"
+    "node-window-manager": "^2.2.4",
+    "uiohook-napi": "^1.5.4"
   },
   "build": {
     "appId": "com.mehul.reframe",
@@ -28,6 +29,7 @@
       "editor.html",
       "frame-guide.html",
       "hud.html",
+      "cursorfx.html",
       "main.js",
       "preload.js"
     ],

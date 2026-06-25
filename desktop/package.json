@@ -1,7 +1,7 @@
 {
   "name": "reframe",
   "productName": "ReFrame",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Live aspect-ratio screen recorder & editor",
   "author": "Mehul Kothari",
   "license": "MIT",

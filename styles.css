@@ -22,7 +22,49 @@
   --mono:'JetBrains Mono',ui-monospace,monospace;
   --maxw:1180px;
   --ease:cubic-bezier(.22,.61,.36,1);
+  /* semantic surface tokens (flip per theme) */
+  --fill:rgba(255,255,255,.03); --fill-2:rgba(255,255,255,.06); --fill-faint:rgba(255,255,255,.012);
+  --nav-bg:rgba(8,9,10,.66); --grid-line:rgba(255,255,255,.025);
+  --on-accent:#fff;
 }
+
+/* ============================================================
+   LIGHT THEME
+   ============================================================ */
+:root[data-theme="light"]{
+  --bg:#f6f7f9; --bg-2:#eceef3;
+  --panel:#ffffff; --panel-2:#f3f4f8; --elev:#e9ebf1;
+  --line:rgba(18,21,33,.10); --line-2:rgba(18,21,33,.16);
+  --txt:#14151b; --txt-2:#3f424d; --muted:#646773; --faint:#9b9ea7;
+  --accent:#5360cf; --accent-2:#4b57c6; --accent-bright:#4954c2;
+  --accent-soft:rgba(83,96,207,.12);
+  --fill:rgba(18,21,33,.04); --fill-2:rgba(18,21,33,.07); --fill-faint:rgba(18,21,33,.022);
+  --nav-bg:rgba(246,247,249,.74); --grid-line:rgba(18,21,33,.05);
+}
+:root[data-theme="light"] ::selection{background:rgba(83,96,207,.22);color:#0a0a0a}
+/* softer ambient glow on light */
+:root[data-theme="light"] .bg-glow{
+  background:
+    radial-gradient(820px 540px at 50% -8%,rgba(83,96,207,.12),transparent 62%),
+    radial-gradient(620px 520px at 88% 8%,rgba(83,96,207,.07),transparent 60%),
+    radial-gradient(700px 600px at 4% 22%,rgba(83,96,207,.05),transparent 60%);
+}
+:root[data-theme="light"] .bg-grain{opacity:.04;mix-blend-mode:multiply}
+/* primary (white) button must become accent on a light page */
+:root[data-theme="light"] .btn-light{background:var(--accent);color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.2) inset}
+:root[data-theme="light"] .btn-light:hover{background:var(--accent-2);box-shadow:0 12px 30px -10px rgba(83,96,207,.5)}
+:root[data-theme="light"] .dl-win{background:var(--accent);color:#fff;border-color:var(--accent)}
+:root[data-theme="light"] .dl-win .dl-text small{color:rgba(255,255,255,.82)}
+:root[data-theme="light"] .dl-win:hover{box-shadow:0 18px 40px -16px rgba(83,96,207,.5)}
+/* readable gradient title on white */
+:root[data-theme="light"] .hero-title em{background:linear-gradient(120deg,var(--accent-bright),#7b86e6 70%,var(--accent))}
+/* theme toggle */
+.theme-toggle{display:grid;place-items:center;width:36px;height:36px;flex:none;cursor:pointer;
+  border-radius:9px;border:1px solid var(--line-2);background:var(--fill);color:var(--txt-2);transition:.18s var(--ease)}
+.theme-toggle:hover{color:var(--txt);background:var(--fill-2)}
+.theme-toggle svg{width:17px;height:17px}
+:root[data-theme="dark"] .theme-toggle .ico-moon{display:none}
+:root[data-theme="light"] .theme-toggle .ico-sun{display:none}
 
 *{box-sizing:border-box}
 html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;scroll-behavior:smooth}
@@ -35,15 +77,15 @@ a{color:inherit;text-decoration:none}
 img,svg{display:block}
 h1,h2,h3{margin:0;font-family:var(--display);font-weight:600;letter-spacing:-.02em;line-height:1.04}
 p{margin:0}
-kbd{font-family:var(--mono);font-size:.72em;font-weight:600;background:rgba(255,255,255,.07);
+kbd{font-family:var(--mono);font-size:.72em;font-weight:600;background:var(--fill-2);
   border:1px solid var(--line-2);border-bottom-width:2px;border-radius:6px;padding:1px 6px;color:var(--txt-2)}
 
 /* ---------- ambient background layers ---------- */
 .bg-grid{
   position:fixed;inset:0;z-index:-3;pointer-events:none;
   background-image:
-    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+    linear-gradient(var(--grid-line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
   background-size:54px 54px;
   mask-image:radial-gradient(120% 90% at 50% 0%,#000 35%,transparent 80%);
   -webkit-mask-image:radial-gradient(120% 90% at 50% 0%,#000 35%,transparent 80%);
@@ -67,7 +109,7 @@ kbd{font-family:var(--mono);font-size:.72em;font-weight:600;background:rgba(255,
   border-bottom:1px solid transparent;transition:.35s var(--ease);
 }
 .nav.scrolled{
-  background:rgba(8,9,10,.66);backdrop-filter:saturate(150%) blur(16px);
+  background:var(--nav-bg);backdrop-filter:saturate(150%) blur(16px);
   -webkit-backdrop-filter:saturate(150%) blur(16px);border-bottom-color:var(--line);height:58px;
 }
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:-.01em}
@@ -77,7 +119,7 @@ kbd{font-family:var(--mono);font-size:.72em;font-weight:600;background:rgba(255,
 .mark svg{width:17px;height:17px}
 .nav-links{display:flex;gap:6px;margin-left:auto}
 .nav-links a{color:var(--txt-2);font-size:14px;font-weight:500;padding:8px 12px;border-radius:8px;transition:.16s}
-.nav-links a:hover{color:var(--txt);background:rgba(255,255,255,.05)}
+.nav-links a:hover{color:var(--txt);background:var(--fill-2)}
 
 /* ---------- buttons ---------- */
 .btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--body);font-weight:600;
@@ -88,8 +130,8 @@ kbd{font-family:var(--mono);font-size:.72em;font-weight:600;background:rgba(255,
 .btn-lg{padding:14px 22px;font-size:15px;border-radius:12px}
 .btn-light{background:#fff;color:#0a0a0a;box-shadow:0 1px 0 rgba(255,255,255,.4) inset}
 .btn-light:hover{background:#fff;transform:translateY(-2px);box-shadow:0 12px 30px -10px rgba(255,255,255,.35)}
-.btn-ghost{background:rgba(255,255,255,.03);color:var(--txt-2);border-color:var(--line-2)}
-.btn-ghost:hover{color:var(--txt);border-color:var(--line-2);background:rgba(255,255,255,.06)}
+.btn-ghost{background:var(--fill);color:var(--txt-2);border-color:var(--line-2)}
+.btn-ghost:hover{color:var(--txt);border-color:var(--line-2);background:var(--fill-2)}
 .is-soon{cursor:not-allowed;opacity:.8}
 .is-soon:hover{transform:none}
 
@@ -102,7 +144,7 @@ kbd{font-family:var(--mono);font-size:.72em;font-weight:600;background:rgba(255,
 
 .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:500;color:var(--txt-2);
   padding:7px 14px;border:1px solid var(--line-2);border-radius:100px;
-  background:rgba(255,255,255,.03);backdrop-filter:blur(8px)}
+  background:var(--fill);backdrop-filter:blur(8px)}
 .rec-dot{width:7px;height:7px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 0 rgba(235,87,87,.6);
   animation:pulse 1.6s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(235,87,87,.55)}70%{box-shadow:0 0 0 7px rgba(235,87,87,0)}100%{box-shadow:0 0 0 0 rgba(235,87,87,0)}}
@@ -125,7 +167,7 @@ kbd{font-family:var(--mono);font-size:.72em;font-weight:600;background:rgba(255,
 @keyframes scroll{0%{opacity:0;transform:translateY(-3px)}40%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
 
 /* ---------- marquee ---------- */
-.marquee{border-block:1px solid var(--line);background:rgba(255,255,255,.012);overflow:hidden;padding:16px 0;position:relative;z-index:2}
+.marquee{border-block:1px solid var(--line);background:var(--fill-faint);overflow:hidden;padding:16px 0;position:relative;z-index:2}
 .marquee::before,.marquee::after{content:"";position:absolute;top:0;bottom:0;width:140px;z-index:2;pointer-events:none}
 .marquee::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
 .marquee::after{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
@@ -289,7 +331,7 @@ kbd{font-family:var(--mono);font-size:.72em;font-weight:600;background:rgba(255,
 .dl-card>*{position:relative;z-index:1}
 .dl-buttons{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:34px}
 .dl-btn{display:inline-flex;align-items:center;gap:14px;text-align:left;padding:15px 22px;border-radius:13px;
-  border:1px solid var(--line-2);background:rgba(255,255,255,.03);transition:.2s var(--ease);position:relative}
+  border:1px solid var(--line-2);background:var(--fill);transition:.2s var(--ease);position:relative}
 .dl-btn .ico{width:26px;height:26px;flex:none}
 .dl-text{display:flex;flex-direction:column;line-height:1.2}
 .dl-text b{font-size:15px;font-weight:600}
@@ -311,7 +353,7 @@ kbd{font-family:var(--mono);font-size:.72em;font-weight:600;background:rgba(255,
 .editor-try:hover span{transform:translateX(4px)}
 
 /* ---------- footer ---------- */
-.footer{border-top:1px solid var(--line);margin-top:60px;background:rgba(255,255,255,.012)}
+.footer{border-top:1px solid var(--line);margin-top:60px;background:var(--fill-faint)}
 .footer-inner{max-width:var(--maxw);margin:0 auto;padding:46px 24px;display:flex;align-items:center;gap:28px;flex-wrap:wrap}
 .footer-brand{display:flex;align-items:center;gap:12px}
 .footer-brand b{font-family:var(--display);font-size:16px;display:block}

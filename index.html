@@ -19,6 +19,9 @@
 <!-- mark JS available so reveal animations only hide content when they can be un-hidden -->
 <script>document.documentElement.classList.add('js');</script>
 
+<!-- set theme before paint (no flash); default to system preference -->
+<script>(function(){try{var t=localStorage.getItem('reframe-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
@@ -46,6 +49,10 @@
     <a href="#editor">Editor</a>
     <a href="#download">Download</a>
   </nav>
+  <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle light / dark theme" title="Toggle theme">
+    <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>
+    <svg class="ico-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8Z"/></svg>
+  </button>
   <a href="/app/" class="btn btn-sm btn-light">Try in browser</a>
 </header>
 
@@ -343,6 +350,24 @@
   </div>
 </footer>
 
+<!-- theme toggle (decoupled from the WebGL module so it works even if Three.js fails) -->
+<script>(function(){
+  var btn=document.getElementById('themeToggle');
+  var meta=document.querySelector('meta[name="theme-color"]');
+  var root=document.documentElement;
+  function syncMeta(t){ if(meta) meta.setAttribute('content', t==='light'?'#f6f7f9':'#08090a'); }
+  function apply(t){
+    root.setAttribute('data-theme',t);
+    try{ localStorage.setItem('reframe-theme',t); }catch(e){}
+    syncMeta(t);
+    if(btn) btn.setAttribute('aria-pressed', String(t==='light'));
+    window.dispatchEvent(new CustomEvent('themechange',{detail:t}));
+  }
+  syncMeta(root.getAttribute('data-theme'));
+  if(btn) btn.addEventListener('click',function(){
+    apply(root.getAttribute('data-theme')==='light'?'dark':'light');
+  });
+})();</script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

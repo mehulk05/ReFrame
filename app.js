@@ -69,6 +69,10 @@ if (eq) {
   camera.position.set(0, 0, 16);
 
   const ACCENT = 0x6872e5, BRIGHT = 0x8b94f0;
+  // material refs so the scene can re-tint when the theme switches
+  const bandMats = [], fillMats = [], gripMats = [];
+  let particleMat = null;
+  const themeOf = () => (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
 
   /* rounded-rect path helper (works for Shape or Path) */
   function roundRect(curve, w, h, r) {
@@ -95,23 +99,20 @@ if (eq) {
 
     const outer = roundRect(new THREE.Shape(), w, h, rOut);
     outer.holes.push(roundRect(new THREE.Path(), iw, ih, rIn));
-    const band = new THREE.Mesh(
-      new THREE.ShapeGeometry(outer),
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false })
-    );
+    const bandMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false });
+    bandMats.push(bandMat);
+    const band = new THREE.Mesh(new THREE.ShapeGeometry(outer), bandMat);
     g.add(band);
 
-    const fill = new THREE.Mesh(
-      new THREE.ShapeGeometry(roundRect(new THREE.Shape(), iw, ih, rIn)),
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false })
-    );
+    const fillMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false });
+    fillMats.push(fillMat);
+    const fill = new THREE.Mesh(new THREE.ShapeGeometry(roundRect(new THREE.Shape(), iw, ih, rIn)), fillMat);
     g.add(fill);
 
     // corner grip dot
-    const grip = new THREE.Mesh(
-      new THREE.CircleGeometry(t * 1.4, 24),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false })
-    );
+    const gripMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false });
+    gripMats.push(gripMat);
+    const grip = new THREE.Mesh(new THREE.CircleGeometry(t * 1.4, 24), gripMat);
     grip.position.set(w / 2 - t, -h / 2 + t, 0.01);
     g.add(grip);
 
@@ -150,11 +151,27 @@ if (eq) {
   }
   const pGeo = new THREE.BufferGeometry();
   pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const particles = new THREE.Points(
-    pGeo,
-    new THREE.PointsMaterial({ color: BRIGHT, size: 0.045, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })
-  );
+  particleMat = new THREE.PointsMaterial({ color: BRIGHT, size: 0.045, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+  const particles = new THREE.Points(pGeo, particleMat);
   scene.add(particles);
+
+  /* theme-aware re-tint: additive glow on dark, normal (opaque) ink on light */
+  function applySceneTheme(theme) {
+    const light = theme === 'light';
+    scene.fog.color.set(light ? 0xeceef3 : 0x08090a);
+    const blend = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+    bandMats.forEach((m) => { m.blending = blend; m.opacity = light ? 0.95 : 0.92; m.needsUpdate = true; });
+    fillMats.forEach((m) => { m.blending = blend; m.opacity = light ? 0.10 : 0.05; m.needsUpdate = true; });
+    gripMats.forEach((m) => { m.color.set(light ? 0x14151b : 0xffffff); m.needsUpdate = true; });
+    if (particleMat) {
+      particleMat.blending = blend;
+      particleMat.color.set(light ? 0x5360cf : BRIGHT);
+      particleMat.opacity = light ? 0.5 : 0.55;
+      particleMat.needsUpdate = true;
+    }
+  }
+  applySceneTheme(themeOf());
+  window.addEventListener('themechange', (e) => applySceneTheme(e.detail || themeOf()));
 
   /* pointer parallax */
   const target = { x: 0, y: 0 };

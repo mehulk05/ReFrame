@@ -358,6 +358,7 @@ let ratioW=9, ratioH=16, countSecs=3, mode='crop', pauseStart=0;
 let sourceMode='screen', zoom=1, camRaf=null, mirror=false;
 const isDesktop=!!(window.reframe && window.reframe.isDesktop); // Electron build
 let guideOn=true; // on-screen frame guide (desktop only)
+let cropTarget=null, cropCur=null, suppressGuidePush=false; // live eased recording region (fractions of source)
 let bubbleShape='circle', camLayout='bubble', bgRemove=false;
 let multiStreams=[], multiLayout='auto', multiRaf=null;
 let segmenter=null, segLoopOn=false;
@@ -866,12 +867,26 @@ function setFrame(x,y,w,h){
   y=Math.max(r.y,Math.min(y,r.y+r.h-h));
   frame.style.left=x+'px';frame.style.top=y+'px';frame.style.width=w+'px';frame.style.height=h+'px';
   if(bubble.style.display==='block') setBubble(bubble.offsetLeft,bubble.offsetTop,bubble.offsetWidth);
+  setCropTargetFromFrame();
   pushFrameGuide();
 }
+/* ---------- live recording region (eased) ---------- */
+function frameFraction(){
+  const r=videoRect(); if(!r.w) return null;
+  return { fx:(frame.offsetLeft-r.x)/r.w, fy:(frame.offsetTop-r.y)/r.h, fw:frame.offsetWidth/r.w, fh:frame.offsetHeight/r.h };
+}
+function setCropTargetFromFrame(){ const f=frameFraction(); if(f) cropTarget=f; }
+function easeCrop(){
+  if(!cropCur||!cropTarget) return;
+  const k=0.22; // ~300ms settle at 30fps — smooth pan/zoom toward the target region
+  cropCur.fx+=(cropTarget.fx-cropCur.fx)*k; cropCur.fy+=(cropTarget.fy-cropCur.fy)*k;
+  cropCur.fw+=(cropTarget.fw-cropCur.fw)*k; cropCur.fh+=(cropTarget.fh-cropCur.fh)*k;
+}
+
 /* ---------- on-screen frame guide (desktop) ---------- */
 let _gFrame=0;
 function pushFrameGuide(){
-  if(!isDesktop) return;
+  if(!isDesktop || suppressGuidePush) return;
   if(_gFrame) return;                       // coalesce: at most one update per animation frame during a drag
   _gFrame=requestAnimationFrame(()=>{
     _gFrame=0;
@@ -953,15 +968,13 @@ function startRecording(){
     _stopVideoOut=()=>cs.getTracks().forEach(t=>t.stop());
     recStopDraw=()=>{ if(_stopVideoOut){_stopVideoOut();_stopVideoOut=null;} };
   }else{
-    const r=videoRect();
-    const sx=(frame.offsetLeft-r.x)/r.w*r.vw;
-    const sy=(frame.offsetTop -r.y)/r.h*r.vh;
-    const sw=frame.offsetWidth /r.w*r.vw;
-    const sh=frame.offsetHeight/r.h*r.vh;
     ({ow,oh}=outputDims());
     canvas.width=ow; canvas.height=oh;
     const ctx=canvas.getContext('2d');
     const bgStyle=$('#bg').value;
+    // initialise the eased recording region from the current frame (Phase A: live + draggable)
+    cropTarget=frameFraction()||{fx:0,fy:0,fw:1,fh:1};
+    cropCur={...cropTarget};
     function drawFit(src){
       const S=src||preview;
       const vw=S.displayWidth||S.videoWidth, vh=S.displayHeight||S.videoHeight;
@@ -980,6 +993,9 @@ function startRecording(){
     }
     function drawFrame(src){
       const S=src||preview;
+      easeCrop(); // glide the recorded region toward its target
+      const vw=S.displayWidth||S.videoWidth, vh=S.displayHeight||S.videoHeight;
+      const sx=cropCur.fx*vw, sy=cropCur.fy*vh, sw=cropCur.fw*vw, sh=cropCur.fh*vh;
       if(camStream && camLayout==='split'){
         ctx.fillStyle='#000'; ctx.fillRect(0,0,ow,oh);
         const splitY=Math.round(oh*0.62);
@@ -1218,10 +1234,18 @@ if(window.reframe && window.reframe.isDesktop && window.reframe.onPickerSources)
   window.reframe.onPickerSources(sources=>{ pickerSources=sources||[]; setFilter('all'); pk.classList.add('on'); });
 }
 
-/* ---------- on-screen frame guide toggle (desktop only) ---------- */
+/* ---------- on-screen frame guide toggle + drag-to-adjust (desktop only) ---------- */
 if(isDesktop){
   $('#guideToggle').style.display='flex';
   $('#guideChk').addEventListener('change', e=>{ guideOn=e.target.checked; pushFrameGuide(); });
+  // overlay dragged on the real desktop → move the in-app frame + retarget the recorded region
+  if(window.reframe.onGuideRegion) window.reframe.onGuideRegion(frac=>{
+    if(!frac || sourceMode!=='screen' || mode!=='crop') return;
+    const r=videoRect(); if(!r.w) return;
+    suppressGuidePush=true; // we're reacting to the overlay — don't echo back to it
+    setFrame(r.x+frac.fx*r.w, r.y+frac.fy*r.h, frac.fw*r.w, frac.fh*r.h); // updates frame + cropTarget (eased follows)
+    suppressGuidePush=false;
+  });
 }
 
 /* ---------- init ---------- */

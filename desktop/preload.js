@@ -12,4 +12,9 @@ contextBridge.exposeInMainWorld('reframe', {
   hideFrameGuide: () => ipcRenderer.send('guide:hide'),
   // the overlay was dragged on the desktop → new recorded region (fraction of the display)
   onGuideRegion: (cb) => ipcRenderer.on('guide:region', (_e, frac) => cb(frac)),
+  // floating recording HUD (excluded from capture)
+  hudShow: () => ipcRenderer.send('hud:show'),
+  hudHide: () => ipcRenderer.send('hud:hide'),
+  hudState: (s) => ipcRenderer.send('hud:state', s),
+  onHudAction: (cb) => ipcRenderer.on('hud:action', (_e, name) => cb(name)),
 });

@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html,body{margin:0;height:100%;width:100%;background:transparent;overflow:hidden;
+    -webkit-user-select:none;user-select:none;font-family:'Segoe UI',system-ui,sans-serif}
+  .bar{display:flex;align-items:center;gap:8px;height:48px;margin:5px 6px;padding:0 8px 0 4px;border-radius:14px;
+    background:rgba(17,18,23,.94);border:1px solid rgba(255,255,255,.13);box-shadow:0 10px 34px rgba(0,0,0,.55);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .grip{cursor:move;color:#7c7d87;padding:0 6px;font-size:15px;line-height:1;touch-action:none}
+  .timer{display:flex;align-items:center;gap:7px;color:#fff;font:600 13px/1 ui-monospace,monospace;min-width:52px;padding:0 2px}
+  .dot{width:8px;height:8px;border-radius:50%;background:#ff5d5d;box-shadow:0 0 0 0 rgba(255,93,93,.6);animation:pulse 1.4s infinite}
+  .dot.paused{background:#f0b34a;animation:none}
+  @keyframes pulse{70%{box-shadow:0 0 0 7px rgba(255,93,93,0)}100%{box-shadow:0 0 0 0 rgba(255,93,93,0)}}
+  .sep{width:1px;height:24px;background:rgba(255,255,255,.13)}
+  button{display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:9px;cursor:pointer;
+    border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);color:#e8eaed;font:600 12px/1 inherit;white-space:nowrap}
+  button:hover{background:rgba(255,255,255,.13)}
+  button.retake{color:#ffb86b;border-color:rgba(255,184,107,.4)}
+  button.stop{background:#eb5757;border-color:#eb5757;color:#fff}
+  button.stop:hover{background:#f06a6a}
+</style>
+</head>
+<body>
+  <div class="bar">
+    <span class="grip" id="grip" title="Drag">⠿</span>
+    <span class="timer"><span class="dot" id="dot"></span><span id="t">0:00</span></span>
+    <span class="sep"></span>
+    <button data-a="keep" title="Mark a safe point">✓ Keep</button>
+    <button data-a="retake" class="retake" title="Scrap back to last keep point">↺ Retake</button>
+    <button data-a="pause" id="pauseBtn" title="Pause / resume">⏸ Pause</button>
+    <button data-a="stop" class="stop" title="Stop &amp; save">■ Stop</button>
+  </div>
+  <script>
+    const { ipcRenderer } = require('electron');
+    document.querySelectorAll('button[data-a]').forEach((b) =>
+      b.addEventListener('click', () => ipcRenderer.send('hud:action', b.dataset.a)));
+    ipcRenderer.on('hud:state', (e, s) => {
+      if (s && s.text != null) document.getElementById('t').textContent = s.text;
+      const pb = document.getElementById('pauseBtn'), dot = document.getElementById('dot');
+      if (s && s.paused) { pb.textContent = '▶ Resume'; dot.classList.add('paused'); }
+      else { pb.textContent = '⏸ Pause'; dot.classList.remove('paused'); }
+    });
+    // manual drag (window is non-focusable; main repositions via setBounds)
+    const grip = document.getElementById('grip'); let drag = null;
+    grip.addEventListener('pointerdown', (e) => {
+      drag = { sx: e.screenX, sy: e.screenY, wx: window.screenX, wy: window.screenY };
+      try { grip.setPointerCapture(e.pointerId); } catch (_) {} e.preventDefault();
+    });
+    grip.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      ipcRenderer.send('hud:moveTo', { x: Math.round(drag.wx + (e.screenX - drag.sx)), y: Math.round(drag.wy + (e.screenY - drag.sy)) });
+    });
+    const end = (e) => { if (drag) { drag = null; try { grip.releasePointerCapture(e.pointerId); } catch (_) {} } };
+    grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
+  </script>
+</body>
+</html>

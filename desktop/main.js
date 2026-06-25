@@ -22,6 +22,7 @@ let winPoll = null;       // interval that follows a captured window's bounds
 let lastGuideRect = null;
 let lastSetBounds = null;  // bounds WE set on the overlay (to distinguish our setBounds from a user drag)
 let overlayDragging = false; // user is manually dragging the overlay (lock interactivity, suppress repositioning)
+let hudWin = null;        // floating recording control HUD (excluded from capture)
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -53,7 +54,8 @@ function createWindow() {
   mainWindow.on('closed', () => {
     if (winPoll) { clearInterval(winPoll); winPoll = null; }
     if (overlayWin && !overlayWin.isDestroyed()) overlayWin.destroy();
-    overlayWin = null;
+    if (hudWin && !hudWin.isDestroyed()) hudWin.destroy();
+    overlayWin = null; hudWin = null;
     mainWindow = null;
   });
 }
@@ -236,6 +238,42 @@ app.whenReady().then(() => {
     if (overlayWin && !overlayWin.isDestroyed()) overlayWin.setIgnoreMouseEvents(true, { forward: true }); // back to click-through
   });
 
+  // ── Floating recording HUD ──────────────────────────────────────────────
+  // Interactive control bar (Stop/Pause/Keep/Retake + timer) floating over the
+  // screen, excluded from the capture via setContentProtection so it never
+  // shows up in the recording. Buttons relay to the recorder window.
+  function ensureHud() {
+    if (hudWin && !hudWin.isDestroyed()) return hudWin;
+    hudWin = new BrowserWindow({
+      width: 440, height: 60, show: false,
+      frame: false, transparent: true, resizable: false, movable: false,
+      focusable: false, skipTaskbar: true, hasShadow: false, alwaysOnTop: true,
+      webPreferences: { nodeIntegration: true, contextIsolation: false, backgroundThrottling: false },
+    });
+    hudWin.setAlwaysOnTop(true, 'screen-saver');
+    try { hudWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }); } catch (e) {}
+    try { hudWin.setContentProtection(true); } catch (e) {} // keep the HUD out of the recording
+    hudWin.loadFile('hud.html');
+    hudWin.on('closed', () => { hudWin = null; });
+    return hudWin;
+  }
+  ipcMain.on('hud:show', () => {
+    const w = ensureHud();
+    const d = screen.getPrimaryDisplay(), b = d.workArea || d.bounds;
+    const ww = 440, wh = 60;
+    w.setBounds({ x: Math.round(b.x + (b.width - ww) / 2), y: Math.round(b.y + b.height - wh - 22), width: ww, height: wh });
+    if (!w.isVisible()) w.showInactive();
+    w.setAlwaysOnTop(true, 'screen-saver');
+  });
+  ipcMain.on('hud:hide', () => { if (hudWin && !hudWin.isDestroyed()) hudWin.hide(); });
+  ipcMain.on('hud:state', (e, s) => { if (hudWin && !hudWin.isDestroyed()) hudWin.webContents.send('hud:state', s); });
+  ipcMain.on('hud:action', (e, name) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('hud:action', name); });
+  ipcMain.on('hud:moveTo', (e, p) => {
+    if (!hudWin || hudWin.isDestroyed() || !p) return;
+    const b = hudWin.getBounds();
+    hudWin.setBounds({ x: Math.round(p.x), y: Math.round(p.y), width: b.width, height: b.height });
+  });
+
   createWindow();
 
   app.on('activate', () => {
@@ -246,6 +284,7 @@ app.whenReady().then(() => {
 app.on('before-quit', () => {
   if (winPoll) { clearInterval(winPoll); winPoll = null; }
   if (overlayWin && !overlayWin.isDestroyed()) overlayWin.destroy();
+  if (hudWin && !hudWin.isDestroyed()) hudWin.destroy();
 });
 
 app.on('window-all-closed', () => {

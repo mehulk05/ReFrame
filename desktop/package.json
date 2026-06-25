@@ -27,6 +27,7 @@
       "index.html",
       "editor.html",
       "frame-guide.html",
+      "hud.html",
       "main.js",
       "preload.js"
     ],

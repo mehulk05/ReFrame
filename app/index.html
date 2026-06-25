@@ -297,6 +297,10 @@
           <option value="webm">WebM</option>
         </select>
       </div>
+      <div class="toggle" id="guideToggle" style="display:none;margin-bottom:8px">
+        <div>On-screen frame guide <small>outline the recorded area on your desktop</small></div>
+        <label class="sw"><input type="checkbox" id="guideChk" checked><span></span></label>
+      </div>
       <button class="action btn-primary" id="pick">Select screen / window</button>
       <button class="action btn-rec" id="rec" disabled><span class="rec-dot" style="display:none"></span>Start recording</button>
       <div id="takeRow" style="display:none;gap:8px;margin-top:8px">
@@ -352,6 +356,8 @@
 const $ = s => document.querySelector(s);
 let ratioW=9, ratioH=16, countSecs=3, mode='crop', pauseStart=0;
 let sourceMode='screen', zoom=1, camRaf=null, mirror=false;
+const isDesktop=!!(window.reframe && window.reframe.isDesktop); // Electron build
+let guideOn=true; // on-screen frame guide (desktop only)
 let bubbleShape='circle', camLayout='bubble', bgRemove=false;
 let multiStreams=[], multiLayout='auto', multiRaf=null;
 let segmenter=null, segLoopOn=false;
@@ -823,6 +829,7 @@ function releaseSource(){
   multiStreams.forEach(m=>m.stream.getTracks().forEach(t=>t.stop())); multiStreams=[];
   if($('#multiList')) renderMultiList();
   stopCamPreview(); stopMultiPreview();
+  if(isDesktop) window.reframe.hideFrameGuide();
   preview.style.display='none'; frame.style.display='none'; empty.style.display='block';
   $('#rec').disabled=true; $('#stopShare').disabled=true;
 }
@@ -859,6 +866,24 @@ function setFrame(x,y,w,h){
   y=Math.max(r.y,Math.min(y,r.y+r.h-h));
   frame.style.left=x+'px';frame.style.top=y+'px';frame.style.width=w+'px';frame.style.height=h+'px';
   if(bubble.style.display==='block') setBubble(bubble.offsetLeft,bubble.offsetTop,bubble.offsetWidth);
+  pushFrameGuide();
+}
+/* ---------- on-screen frame guide (desktop) ---------- */
+let _gFrame=0;
+function pushFrameGuide(){
+  if(!isDesktop) return;
+  if(_gFrame) return;                       // coalesce: at most one update per animation frame during a drag
+  _gFrame=requestAnimationFrame(()=>{
+    _gFrame=0;
+    const active = guideOn && sourceMode==='screen' && mode==='crop' && displayStream && frame.style.display!=='none';
+    if(!active){ window.reframe.hideFrameGuide(); return; }
+    const r=videoRect(); if(!r.w){ window.reframe.hideFrameGuide(); return; }
+    window.reframe.setFrameGuide({
+      fx:(frame.offsetLeft-r.x)/r.w, fy:(frame.offsetTop-r.y)/r.h,
+      fw:frame.offsetWidth/r.w,      fh:frame.offsetHeight/r.h,
+      label:`${ratioW}:${ratioH}`
+    });
+  });
 }
 
 /* drag + resize */
@@ -1191,6 +1216,12 @@ if(window.reframe && window.reframe.isDesktop && window.reframe.onPickerSources)
   pk.addEventListener('click',e=>{ if(e.target===pk) choosePicker(null); }); // backdrop click cancels
   document.addEventListener('keydown',e=>{ if(e.key==='Escape' && pk.classList.contains('on')) choosePicker(null); });
   window.reframe.onPickerSources(sources=>{ pickerSources=sources||[]; setFilter('all'); pk.classList.add('on'); });
+}
+
+/* ---------- on-screen frame guide toggle (desktop only) ---------- */
+if(isDesktop){
+  $('#guideToggle').style.display='flex';
+  $('#guideChk').addEventListener('change', e=>{ guideOn=e.target.checked; pushFrameGuide(); });
 }
 
 /* ---------- init ---------- */

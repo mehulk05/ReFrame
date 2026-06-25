@@ -890,6 +890,7 @@ function pushFrameGuide(){
   if(_gFrame) return;                       // coalesce: at most one update per animation frame during a drag
   _gFrame=requestAnimationFrame(()=>{
     _gFrame=0;
+    if(suppressGuidePush) return;           // flag may have flipped on while this frame was queued
     const active = guideOn && sourceMode==='screen' && mode==='crop' && displayStream && frame.style.display!=='none';
     if(!active){ window.reframe.hideFrameGuide(); return; }
     const r=videoRect(); if(!r.w){ window.reframe.hideFrameGuide(); return; }
@@ -1006,9 +1007,12 @@ function startRecording(){
         if(mode==='fit') drawFit(S);
         else ctx.drawImage(S, sx,sy,sw,sh, 0,0,ow,oh);
         if(camStream && camLayout==='bubble' && bubble.style.display==='block' && camVid.videoWidth){
-          const bx=(bubble.offsetLeft-frame.offsetLeft)/frame.offsetWidth*ow;
-          const by=(bubble.offsetTop -frame.offsetTop )/frame.offsetHeight*oh;
-          const bd=bubble.offsetWidth/frame.offsetWidth*ow;
+          // bubble pins to the same screen content as the (eased) background: target-frame → source fraction → project via cropCur
+          const fbx=(bubble.offsetLeft-frame.offsetLeft)/frame.offsetWidth;
+          const fby=(bubble.offsetTop -frame.offsetTop )/frame.offsetHeight;
+          const fbd=bubble.offsetWidth/frame.offsetWidth;
+          const sfx=cropTarget.fx+fbx*cropTarget.fw, sfy=cropTarget.fy+fby*cropTarget.fh, sfd=fbd*cropTarget.fw;
+          const bx=(sfx-cropCur.fx)/cropCur.fw*ow, by=(sfy-cropCur.fy)/cropCur.fh*oh, bd=sfd/cropCur.fw*ow;
           const cs=camSource();
           if(cs.w){
             const side=Math.min(cs.w,cs.h), csx=(cs.w-side)/2, csy=(cs.h-side)/2;
@@ -1242,9 +1246,12 @@ if(isDesktop){
   if(window.reframe.onGuideRegion) window.reframe.onGuideRegion(frac=>{
     if(!frac || sourceMode!=='screen' || mode!=='crop') return;
     const r=videoRect(); if(!r.w) return;
+    if(_gFrame){ cancelAnimationFrame(_gFrame); _gFrame=0; } // drop any stale push queued from an in-app drag
     suppressGuidePush=true; // we're reacting to the overlay — don't echo back to it
     setFrame(r.x+frac.fx*r.w, r.y+frac.fy*r.h, frac.fw*r.w, frac.fh*r.h); // updates frame + cropTarget (eased follows)
     suppressGuidePush=false;
+    // one corrective push so the overlay snaps to the clamped/ratio-locked region (lastSetBounds guard absorbs it)
+    requestAnimationFrame(pushFrameGuide);
   });
 }
 

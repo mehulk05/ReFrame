@@ -16,9 +16,9 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            build: npm run dist:win
+            build: npm run dist:win -- --publish never
           - os: macos-latest
-            build: npm run dist:mac
+            build: npm run dist:mac -- --publish never
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -33,8 +33,7 @@ jobs:
       - name: Build installer
         run: ${{ matrix.build }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false   # unsigned mac build (no Apple Developer cert yet)
+          CSC_IDENTITY_AUTO_DISCOVERY: false   # unsigned mac build (no Apple Developer cert yet); also stops electron-builder auto-publish
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:

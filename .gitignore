@@ -3,4 +3,7 @@ node_modules/
 .DS_Store
 *.log
 
-.vercel
+# desktop build artifacts
+dist-app/
+desktop/dist-app/
+desktop/el-*.txt

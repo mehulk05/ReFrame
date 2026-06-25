@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html,body{margin:0;height:100%;width:100%;background:transparent;overflow:hidden;
+    -webkit-user-select:none;user-select:none;cursor:default}
+  body{pointer-events:none}
+  .frame{position:fixed;inset:0;border:3px solid #5e6ad2;border-radius:3px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.45), inset 0 0 24px rgba(94,106,210,.55)}
+  /* grab ring — press any edge to drag the recorded region (manual move; move-only in v1) */
+  .edge{position:fixed;pointer-events:auto;cursor:move;touch-action:none}
+  .edge.t{top:0;left:0;right:0;height:16px}
+  .edge.b{bottom:0;left:0;right:0;height:16px}
+  .edge.l{top:0;bottom:0;left:0;width:16px}
+  .edge.r{top:0;bottom:0;right:0;width:16px}
+  .corner{position:fixed;width:20px;height:20px;border:3px solid #aab2ff;pointer-events:none}
+  .tl{top:-2px;left:-2px;border-right:none;border-bottom:none}
+  .tr{top:-2px;right:-2px;border-left:none;border-bottom:none}
+  .bl{bottom:-2px;left:-2px;border-right:none;border-top:none}
+  .br{bottom:-2px;right:-2px;border-left:none;border-top:none}
+  .tag{position:fixed;top:8px;left:50%;transform:translateX(-50%);pointer-events:none;
+    background:#5e6ad2;color:#fff;font:600 12px/1 "Segoe UI",system-ui,sans-serif;
+    padding:5px 11px;border-radius:7px;display:flex;align-items:center;gap:7px;white-space:nowrap;
+    box-shadow:0 2px 10px rgba(0,0,0,.4)}
+  .dot{width:7px;height:7px;border-radius:50%;background:#ff5d5d;
+    box-shadow:0 0 0 0 rgba(255,93,93,.6);animation:pulse 1.4s infinite}
+  @keyframes pulse{70%{box-shadow:0 0 0 7px rgba(255,93,93,0)}100%{box-shadow:0 0 0 0 rgba(255,93,93,0)}}
+</style>
+</head>
+<body>
+  <div class="frame"></div>
+  <div class="edge t"></div><div class="edge b"></div><div class="edge l"></div><div class="edge r"></div>
+  <div class="corner tl"></div><div class="corner tr"></div>
+  <div class="corner bl"></div><div class="corner br"></div>
+  <div class="tag"><span class="dot"></span><span id="lbl">9:16</span><span style="opacity:.75;font-weight:500">· drag edge to move</span></div>
+  <script>
+    const { ipcRenderer } = require('electron');
+    const lbl = document.getElementById('lbl');
+    let over = null, drag = null;
+    ipcRenderer.on('guide:label', (e, t) => { lbl.textContent = t || ''; });
+    ipcRenderer.on('guide:reset', () => { over = false; drag = null; });
+
+    // Tell main when the cursor is near an edge so it makes the window interactive (otherwise it's click-through).
+    const M = 18;
+    function setHover(o){ if (o !== over) { over = o; ipcRenderer.send('guide:hover', o); } }
+    window.addEventListener('mousemove', (e) => {
+      if (drag) return;
+      const x = e.clientX, y = e.clientY, w = innerWidth, h = innerHeight;
+      setHover(x < M || y < M || x > w - M || y > h - M);
+    });
+    window.addEventListener('mouseout', () => { if (!drag) setHover(false); });
+
+    // Manual drag: move the window via setBounds in main (robust on non-focusable / click-through windows,
+    // where -webkit-app-region:drag does not engage). screenX/screenY + window.screenX are DIP — consistent with setBounds.
+    document.querySelectorAll('.edge').forEach((el) => {
+      el.addEventListener('pointerdown', (e) => {
+        drag = { sx: e.screenX, sy: e.screenY, wx: window.screenX, wy: window.screenY };
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        ipcRenderer.send('guide:dragStart');
+        e.preventDefault();
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (!drag) return;
+        ipcRenderer.send('guide:moveTo', { x: Math.round(drag.wx + (e.screenX - drag.sx)), y: Math.round(drag.wy + (e.screenY - drag.sy)) });
+      });
+      const end = (e) => { if (!drag) return; drag = null; try { el.releasePointerCapture(e.pointerId); } catch (_) {} ipcRenderer.send('guide:dragEnd'); };
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
+    });
+  </script>
+</body>
+</html>

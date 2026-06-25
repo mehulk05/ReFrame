@@ -1,0 +1,46 @@
+name: Build & Release Desktop
+
+# Tag a version to build + publish installers, e.g.:  git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch: {}   # also allow manual runs from the Actions tab
+
+permissions:
+  contents: write          # needed to create/update the GitHub Release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            build: npm run dist:win
+          - os: macos-latest
+            build: npm run dist:mac
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build installer
+        run: ${{ matrix.build }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false   # unsigned mac build (no Apple Developer cert yet)
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/dist-app/*.exe
+            desktop/dist-app/*.dmg
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,64 @@
+{
+  "name": "reframe",
+  "productName": "ReFrame",
+  "version": "1.0.0",
+  "description": "Live aspect-ratio screen recorder & editor",
+  "author": "Mehul Kothari",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^31.7.6",
+    "electron-builder": "^24.13.3",
+    "sharp": "^0.35.2"
+  },
+  "optionalDependencies": {
+    "node-window-manager": "^2.2.4"
+  },
+  "build": {
+    "appId": "com.mehul.reframe",
+    "productName": "ReFrame",
+    "files": [
+      "index.html",
+      "editor.html",
+      "frame-guide.html",
+      "main.js",
+      "preload.js"
+    ],
+    "directories": {
+      "output": "dist-app"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "ReFrame-Setup-Windows.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "artifactName": "ReFrame-Setup-macOS.${ext}",
+      "category": "public.app-category.video",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSCameraUsageDescription": "ReFrame uses your camera for the webcam bubble overlay.",
+        "NSMicrophoneUsageDescription": "ReFrame records your microphone audio.",
+        "NSScreenCaptureUsageDescription": "ReFrame records your screen."
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 {
   "name": "reframe",
   "productName": "ReFrame",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Live aspect-ratio screen recorder & editor",
   "author": "Mehul Kothari",
   "license": "MIT",
@@ -35,14 +35,20 @@
     },
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "portable",
+        "zip"
       ],
-      "artifactName": "ReFrame-Setup-Windows.${ext}"
+      "artifactName": "ReFrame-Windows.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "ReFrame-Setup-Windows.${ext}"
+    },
+    "portable": {
+      "artifactName": "ReFrame-Portable-Windows.${ext}"
     },
     "mac": {
       "target": [

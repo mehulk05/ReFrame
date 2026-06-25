@@ -3,6 +3,10 @@
    Dark · Linear/Vercel-grade · indigo accent · cinematic depth
    ============================================================ */
 
+.dl-alt{font-size:13px;color:var(--muted);margin-top:12px;text-align:center}
+.dl-alt a{color:var(--accent-bright);text-decoration:none;border-bottom:1px solid rgba(139,148,240,.35)}
+.dl-alt a:hover{border-bottom-color:var(--accent-bright)}
+
 :root{
   --bg:#08090a; --bg-2:#0a0b0d;
   --panel:#0e0f11; --panel-2:#121315; --elev:#16171a;
